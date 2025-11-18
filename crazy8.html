@@ -1,0 +1,1535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♠</text></svg>">
+<title>Crazy Eights / UNO Hybrid — Single Page</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --card-bg:#fff;
+    --accent:#ffbe4b;
+    --muted:#9aa7b2;
+    --panel:#0f1720;
+    --red:#D92D20;
+    --green: #2E7D32;
+    --blue: #0277BD;
+    --yellow: #FFC107;
+    --black: #111;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+  body{background:linear-gradient(180deg,#061021 0%, #071428 60%);color:#e6eef6;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+  .app{width:100%;max-width:1100px; display: flex; flex-direction: column; height: 100%; max-height: 900px;}
+  
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;flex-wrap:wrap;flex-shrink:0}
+  h1{font-size:20px;margin:0}
+  .controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap; justify-content: flex-end;}
+  .control-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  
+  button{background:var(--accent);border:0;color:#052026;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+  button.secondary, label.secondary, select.secondary {background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:6px 10px; border-radius:8px; display:inline-flex; align-items:center; gap: 4px; font-size: 13px; font-family: inherit;}
+  select.secondary { padding: 7px 10px; background: var(--panel); }
+  label.secondary input { margin-right: 4px; }
+  button:disabled{opacity:0.5;cursor:not-allowed;}
+
+  .board{
+    display:grid;
+    grid-template-rows: auto 1fr;
+    gap:18px;
+    flex-grow: 1;
+    min-height: 0;
+  }
+  .top-row { display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
+  .center-row { 
+    display: grid;
+    grid-template-columns: auto 1fr; 
+    gap: 18px;
+    min-height: 0;
+  }
+
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6); display: flex; flex-direction: column; min-height: 0;}
+  .area{min-height:160px}
+  /* Desktop Hand: Wrap, No scroll */
+  .hand{display:flex;gap:6px;flex-wrap:wrap; padding: 4px; transition: opacity 0.2s; overflow-x: visible;} 
+  
+  .card{
+    width:75px;height:107px;
+    border-radius:8px;background:var(--card-bg);color:var(--black);display:flex;flex-direction:column;justify-content:space-between;padding:8px;box-shadow:0 6px 18px rgba(2,6,23,0.5);cursor:pointer;
+    user-select:none;font-weight:700; border: 2px solid var(--card-bg); flex-shrink: 0; transition: all 0.2s;
+    box-sizing: border-box; 
+    position: relative; 
+  }
+  .card .suit{font-size:30px;line-height:0.9}
+  .card .rank{font-size:20px}
+  
+  .card.back{background:linear-gradient(180deg,#3a4a63,#253046);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; border: none;}
+  
+  .card.small{width:54px;height:78px;border-radius:6px;padding:4px;font-size:12px; border: none;}
+  .card.small .suit{font-size: 20px;}
+  .card.small .rank{font-size: 16px;}
+
+  #opponentCardCount {
+    font-size: 24px;
+    font-weight: 800;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    color: white;
+    width: 40px;
+    height: 58px;
+  }
+  
+  .hand.size-m .card { width: 66px; height: 94px; }
+  .hand.size-m .card .suit { font-size: 24px; }
+  .hand.size-m .card .rank { font-size: 16px; }
+  .hand.size-m .card.uno .rank { font-size: 20px; }
+  .hand.size-m .card.uno .suit { display: none; }
+
+  .hand.size-l .card { width: 50px; height: 72px; padding: 4px; border-radius: 4px; }
+  .hand.size-l .card .suit { font-size: 18px; }
+  .hand.size-l .card .rank { font-size: 14px; }
+  .hand.size-l .card.uno .rank { font-size: 16px; }
+  .hand.size-l .card.uno .suit { display: none; }
+  
+  /* Size XL: Smallest card for max efficiency */
+  .hand.size-xl .card { width: 40px; height: 58px; padding: 2px; border-radius: 3px; }
+  .hand.size-xl .card .suit { font-size: 14px; }
+  .hand.size-xl .card .rank { font-size: 12px; }
+  .hand.size-xl .card.uno .rank { font-size: 12px; }
+
+
+  .card[data-suit="♥"], .card[data-suit="♦"] { color: var(--red); }
+  .suit-btn[data-suit="♥"], .suit-btn[data-suit="♦"] { color: var(--red); }
+  
+  .card.uno { border-width: 2px; }
+  .card.uno .rank { font-size: 24px; font-weight: 800; text-align: center; margin: auto; } 
+  .card.uno .suit { display: none; }
+  .card[data-color="R"] { background-color: var(--red); color: white; border-color: white; }
+  .card[data-color="G"] { background-color: var(--green); color: white; border-color: white; }
+  .card[data-color="B"] { background-color: var(--blue); color: white; border-color: white; }
+  .card[data-color="Y"] { background-color: var(--yellow); color: var(--black); border-color: var(--black); }
+  .card.wild { background: linear-gradient(135deg, var(--red) 25%, var(--yellow) 25%, var(--yellow) 50%, var(--blue) 50%, var(--blue) 75%, var(--green) 75%); color: white; border-color: white; }
+  .card.wild .rank { background: rgba(0,0,0,0.6); border-radius: 4px; padding: 2px 8px; }
+
+  .suit-btn[data-color="R"] { background: var(--red); color: white; }
+  .suit-btn[data-color="G"] { background: var(--green); color: white; }
+  .suit-btn[data-color="B"] { background: var(--blue); color: white; }
+  .suit-btn[data-color="Y"] { background: var(--yellow); color: var(--black); }
+  
+  .wild-suit-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 21px; 
+    font-weight: 800;
+    line-height: 1;
+    padding: 5px 8px; 
+    border-radius: 8px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border: 2px solid white;
+    pointer-events: none;
+    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+  }
+  .wild-suit-indicator[data-suit="♥"], .wild-suit-indicator[data-suit="♦"] { color: var(--red); }
+  .wild-suit-indicator[data-suit="♠"], .wild-suit-indicator[data-suit="♣"] { color: white; }
+  .wild-suit-indicator[data-color="R"] { background: var(--red); color: white; border-color: white;}
+  .wild-suit-indicator[data-color="G"] { background: var(--green); color: white; border-color: white;}
+  .wild-suit-indicator[data-color="B"] { background: var(--blue); color: white; border-color: white;}
+  .wild-suit-indicator[data-color="Y"] { background: var(--yellow); color: var(--black); border-color: var(--black);}
+  .card.wild .wild-suit-indicator { 
+    font-size: 15px; 
+    padding: 4px 6px; 
+  }
+
+
+  .center-stack{display:flex;flex-direction:column;align-items:center;gap:18px; padding: 12px;}
+  .stack-row{display:flex;gap:16px;align-items:center}
+  .info{font-size:13px;color:var(--muted)}
+  
+  /* NEW: Status and Log Toggles */
+  .mobile-toggle { display: none; }
+  .status-content, .log-content { display: block; }
+  
+  /* Log Preview is now the Log Toggle (desktop only) */
+  .log-toggle { 
+    max-height: 80px; 
+    min-height: 80px; 
+    overflow: hidden; 
+    font-size: 13px; 
+    color: var(--muted); 
+    cursor: pointer; 
+    border-radius: 6px; 
+    padding: 6px; 
+    background: rgba(255,255,255,0.01); 
+    margin-top: 8px;
+    /* Hide on mobile, show on desktop */
+    display: none; 
+  }
+  .log-toggle:hover { background: rgba(255,255,255,0.03); }
+  .log-toggle div { margin-bottom: 2px; }
+  .log-full { max-height: 400px; overflow-y: auto; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 13px; color: var(--muted); }
+  
+  .status{display:flex;gap:10px;align-items:center}
+  .big-turn{font-size:16px;font-weight:700}
+
+  .suit-btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer;font-weight: 600; min-width: 80px; text-align: center;}
+  .suit-btn:focus{outline:2px solid rgba(255,255,255,0.08)}
+  .muted{color:var(--muted)}
+  
+  .modal-overlay{display:none;position:fixed;z-index:100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);align-items:center;justify-content:center}
+  .modal-overlay.visible{display:flex}
+  .modal-panel{background:var(--panel);border-radius:12px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.4);min-width:320px; max-width: 500px;}
+  .modal-panel h2{margin:0 0 16px 0;font-size:18px}
+  .modal-panel .settings-group{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+  .modal-panel .settings-group label{font-size: 14px; display: flex; justify-content: space-between; align-items: center;}
+  .modal-panel .modal-footer{display:flex;justify-content:flex-end;align-items:center;margin-top:16px; gap: 8px;}
+  .modal-panel .warning{font-size: 13px; color: var(--muted); margin-right: auto;}
+  .modal-panel ul { margin-top: 0; padding-left: 20px; }
+  .modal-panel li { margin-bottom: 8px; }
+  
+  #suitPickerButtons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
+
+
+  @media (min-width:981px) {
+    /* Desktop: Ensure log preview and full status content are visible by default */
+    .log-toggle { display: block; }
+  }
+
+  @media (max-width:980px){
+    
+    /* Header adjustments for mobile */
+    header { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 8px; } /* MODIFIED: gap */
+    h1 { text-align: center; font-size: 18px; } /* MODIFIED: font-size */
+    .controls { justify-content: space-between; gap: 8px; } /* MODIFIED: gap */
+    .control-group { 
+      /* flex-grow: 1; */ /* REMOVED */
+      /* justify-content: space-around; */ /* REMOVED */
+      justify-content: center; /* ADDED */
+      gap: 8px; /* ADDED */
+    }
+    /* Force controls to a single line */
+    .controls { flex-wrap: nowrap; }
+    .controls .control-group:first-child { order: 1; } 
+    .controls .control-group:last-child { order: 2; } 
+    
+    /* ADDED: Shrink header buttons on mobile */
+    header .controls button {
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+    header .controls button.secondary {
+      padding: 5px 7px; /* 1px less to account for border */
+      font-size: 12px;
+    }
+    
+    /* Layout adjustments for mobile */
+    .board{grid-template-rows: auto 1fr;}
+    .top-row { grid-template-columns: 1fr; gap: 10px; }
+    .center-row { 
+      grid-template-columns: 1fr; 
+      grid-template-rows: auto 1fr; /* ADDED: Fix overlap */
+      min-height: 0; 
+      gap: 10px;
+    }
+    .panel{padding:10px}
+    .area{min-height: auto;} /* MODIFIED: Was 120px */
+    
+    /* ADDED: Minimal opponent panel */
+    #opponentPanel {
+      padding: 8px; 
+    }
+    #opponentPanel .big-turn {
+      font-size: 14px; 
+    }
+    #opponentPanel .info {
+      font-size: 12px;
+    }
+    #opponentCardCount {
+      width: 30px;
+      height: 44px;
+      font-size: 18px;
+    }
+    
+    /* MODIFIED: Mobile Hand Scroll and Card Size FIX */
+    #playerHandScrollContainer {
+      overflow-x: auto; /* Enable horizontal scrolling/swiping */
+      -webkit-overflow-scrolling: touch; 
+      scrollbar-width: none; /* Hide scrollbar for Firefox */
+      /* ADDED: Fill parent panel */
+      flex-grow: 1;
+      min-height: 0;
+    }
+    #playerHandScrollContainer::-webkit-scrollbar {
+      display: none; /* Hide scrollbar for Chrome, Safari, etc. */
+    }
+    
+    #playerHand {
+      flex-wrap: nowrap; /* Disable wrapping */
+      overflow-x: visible; /* Hand itself is visible, parent scrolls */
+      padding: 8px 4px;
+      margin: 0;
+      /* ADDED: Ensure it has a minimum height to be visible */
+      min-height: 62px; /* Card height (58px) + padding (4px) */
+    }
+    
+    /* Force smallest card size on mobile to save vertical space */
+    #playerHand .card { 
+      width: 40px; 
+      height: 58px; 
+      padding: 2px; 
+      border-radius: 3px; 
+    }
+    #playerHand .card .suit { font-size: 14px; }
+    #playerHand .card .rank { font-size: 12px; }
+    #playerHand .card.uno .rank { font-size: 12px; }
+
+    /* Mobile Status/Log Toggles */
+    .mobile-toggle { 
+        display: flex; 
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        font-weight: 600;
+        margin-top: 4px;
+        color: var(--muted);
+    }
+    .mobile-toggle span { display: flex; align-items: center; gap: 8px; }
+    .toggle-content.collapsed { display: none; }
+    
+    /* Hide the default Status text/content, only show the toggle bar */
+    #statusContent { display: none; }
+    
+    /* Keep Log preview hidden on mobile */
+    .log-toggle { display: none; }
+
+    /* Show the full log content when expanded on mobile */
+    #logContent:not(.collapsed) .log-full { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+<header>
+  <h1>Crazy Eights / UNO Hybrid</h1>
+  <div class="controls">
+    <div class="control-group">
+      <button id="newGameBtn">New Game</button>
+      <button id="hintBtn" class="secondary">Hint</button>
+      <button id="cpuSpeedBtn" class="secondary">CPU Speed: Normal</button>
+    </div>
+    <div class="control-group">
+      <button id="rulesBtn" class="secondary">Rules</button>
+      <button id="settingsBtn" class="secondary">⚙️ Settings</button>
+    </div>
+  </div>
+</header>
+
+<div class="board">
+  
+  <div class="top-row">
+    <div class="panel area" id="opponentPanel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="big-turn" id="turnLabel">Turn: —</div>
+          <div class="info"><span id="opponentLabel">CPU</span>: <span id="opponentInfo">waiting</span></div>
+        </div>
+        <div class="status">
+          <div id="opponentCardCount" class="card back small">0</div>
+          <div class="info" id="opponentHandLabel">P2 Hand</div>
+        </div>
+      </div>
+      <div>
+      </div>
+    </div>
+    
+    <div class="panel">
+      <div class="mobile-toggle" id="statusToggle">
+        <span>Game Status: <span id="currentSuitPreview" style="font-weight: 700;">—</span></span>
+        <span id="statusChevron">▼</span>
+      </div>
+      <div id="statusContent" class="toggle-content"> 
+        <div class="info">Controls & status:</div>
+        <div id="statusText" class="info muted" style="margin-top:4px">Game not started</div>
+        <div id="currentSuit" class="info" style="margin-top:4px">Suit: —</div>
+      </div>
+      
+      <div class="mobile-toggle" id="logToggle">
+        <span>Game Log (Full)</span>
+        <span id="logChevron">▼</span>
+      </div>
+      <div id="logContent" class="toggle-content collapsed">
+        <div id="logPreview" class="log-toggle"></div>
+        <div id="fullLogContent" class="log-full" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="center-row">
+    <div class="panel center-stack">
+      <div class="stack-row">
+        <div>
+          <div class="info">Draw pile</div>
+          <div id="drawPile" class="card back small">DECK</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <div class="info">Discard (top)</div>
+          <div id="discardTop" class="card"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="drawBtn" class="secondary">Draw</button>
+        <button id="passBtn" class="secondary" style="display: none;">Pass/Skip</button>
+        <button id="shuffleBtn" class="secondary">Shuffle Discard Into Deck</button>
+      </div>
+    </div>
+
+    <div class="panel area">
+      <div style="display:flex;justify-content:space-between;align-items:center; flex-shrink: 0;">
+        <div>
+          <div class="big-turn" id="playerHandLabel">You</div>
+          <div class="info">Click a card to play it. Click deck to draw.</div>
+        </div>
+        <div class="status">
+          <div class="info">Your hand</div>
+          <div id="playerCount" class="info">0</div>
+        </div>
+      </div>
+      
+      <div id="playerHandScrollContainer" style="margin-top:8px;">
+        <div class="hand" id="playerHand">
+        </div>
+      </div>
+
+    </div>
+  </div>
+  
+</div>
+</div>
+
+<div id="settingsModal" class="modal-overlay">
+  <div class="modal-panel">
+    <h2>Game Settings</h2>
+    <div class="settings-group" id="settingsPanel">
+      <label class="secondary">Game Mode
+        <select id="gameModeSelect" class="secondary">
+          <option value="pvc">Player vs. CPU</option>
+          <option value="pvp">Player vs. Player</option>
+        </select>
+      </label>
+      <label class="secondary">Initial Cards
+        <select id="initialHandSizeSelect" class="secondary">
+          <option value="7">7 Cards</option>
+          <option value="8" selected>8 Cards (Classic C8)</option>
+        </select>
+      </label>
+      <label class="secondary">UNO Mode <input type="checkbox" id="unoModeChk"></label>
+      <label class="secondary" id="reverseSkipLabel" style="display: none;">2P Reverse acts as Skip <input type="checkbox" id="reverseSkipChk"></label>
+      <label class="secondary">Must Play If Able <input type="checkbox" id="mustPlayIfAbleChk"></label>
+      <label class="secondary">Draw Until Playable <input type="checkbox" id="drawUntilPlayableChk"></label>
+      <label class="secondary">Allow Pass <input type="checkbox" id="allowPassChk"></label>
+      <label class="secondary">First Turn Rule
+        <select id="firstTurnRuleSelect" class="secondary">
+          <option value="p1">Player 1 Goes First</option>
+          <option value="p2">Player 2/CPU Goes First</option>
+          <option value="random">Random</option>
+          <option value="loser">Loser Goes First</option>
+        </select>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <span class="warning">Applying settings will start a new game.</span>
+      <div class="control-group">
+        <button id="cancelSettingsBtn" class="secondary">Cancel</button>
+        <button id="applySettingsBtn">Apply & Restart</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="rulesModal" class="modal-overlay">
+  <div class="modal-panel">
+    <h2>Game Rules</h2>
+    <div id="rulesContent">
+      <div id="rulesC8">
+        <h3>Crazy Eights</h3>
+        <ul>
+          <li><b>Objective:</b> Be the first player to empty your hand.</li>
+          <li><b>Play:</b> Match the top card of the discard pile by either <b>Rank</b> or <b>Suit</b>.</li>
+          <li><b>Eights (8):</b> Eights are wild. You can play an 8 on any card. After playing, you must choose a new suit for the next player to follow.</li>
+          <li><b>Drawing:</b> If you cannot play a card, you must draw from the deck. In this version, drawing ends your turn (unless "Draw Until Playable" is on).</li>
+        </ul>
+      </div>
+      <div id="rulesUNO" style="display: none;">
+        <h3>UNO Mode</h3>
+        <ul>
+          <li><b>Objective:</b> Be the first player to empty your hand.</li>
+          <li><b>Play:</b> Match the top card of the discard pile by either <b>Number</b>, <b>Color</b>, or <b>Symbol</b>.</li>
+          <li><b>Wild:</b> A "WILD" card is wild. You can play it on any card. After playing, you must choose a new color for the next player to follow.</li>
+          <li><b>Action Cards (1v1 Rules):</b>
+            <ul>
+              <li><b>SKIP:</b> The other player is skipped. You play again.</li>
+              <li><b>REV (Reverse):</b> The other player is skipped. You play again. (This can be changed in Settings).</li>
+              <li><b>D2 (Draw 2):</b> The other player must draw 2 cards and is skipped. You play again. **(The draw penalty is applied at the start of the next player's turn)**.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="closeRulesBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="logModal" class="modal-overlay">
+  <div class="modal-panel">
+    <h2>Full Game Log</h2>
+    <div id="fullLog" class="log-full"></div>
+    <div class="modal-footer">
+      <button id="closeLogBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="endGameModal" class="modal-overlay">
+  <div class="modal-panel">
+    <h2 id="endGameTitle">Game Over</h2>
+    <p id="endGameMessage" style="font-size: 16px; text-align: center; margin: 20px 0;"></p>
+    <div class="modal-footer" style="justify-content: center;">
+      <button id="endGameNewGameBtn">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<div id="suitPickerModal" class="modal-overlay">
+  <div class="modal-panel">
+    <h2 id="suitPickerTitle">Choose a Suit</h2>
+    <div id="suitPickerButtons">
+    </div>
+  </div>
+</div>
+
+<div id="handOverModal" class="modal-overlay">
+  <div class="modal-panel">
+    <h2>Pass the Device</h2>
+    <p id="handOverMessage" style="font-size: 16px; text-align: center; margin: 20px 0;">Pass to Player 2. Click OK when ready.</p>
+    <div class="modal-footer" style="justify-content: center;">
+      <button id="handOverBtn">OK</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// Constants
+const SUITS=['♠','♥','♦','♣'];
+const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const UNO_COLORS=['R','G','B','Y'];
+const UNO_SPECIAL=['SKIP','REV','D2','WILD'];
+
+// State
+let state={
+  deck:[], discard:[], 
+  players:{p1:[],p2:[]},
+  currentPlayer:'p1',
+  currentSuit:null, 
+  currentColor:null,
+  cpuPlayDelay: 700,
+  initialHandSize: 8,
+  gameMode: 'pvc',
+  unoMode:false, 
+  mustPlayIfAble:false, 
+  drawUntilPlayable:false, 
+  allowPass:false,
+  reverseSkip: false,
+  firstTurnRule: 'p1',
+  lastWinner: null,
+  uiLocked: false,
+  isPickingSuit: false,
+  pendingDraw: 0
+};
+
+const el={
+  playerHand:document.getElementById('playerHand'),
+  drawPile:document.getElementById('drawPile'),
+  discardTop:document.getElementById('discardTop'),
+  drawBtn:document.getElementById('drawBtn'),
+  passBtn:document.getElementById('passBtn'),
+  newGameBtn:document.getElementById('newGameBtn'),
+  opponentCardCount:document.getElementById('opponentCardCount'),
+  playerCount:document.getElementById('playerCount'),
+  statusText:document.getElementById('statusText'),
+  logPreview:document.getElementById('logPreview'),
+  turnLabel:document.getElementById('turnLabel'),
+  opponentInfo:document.getElementById('opponentInfo'),
+  opponentLabel:document.getElementById('opponentLabel'),
+  opponentHandLabel:document.getElementById('opponentHandLabel'),
+  playerHandLabel:document.getElementById('playerHandLabel'),
+  currentSuit:document.getElementById('currentSuit'),
+  hintBtn:document.getElementById('hintBtn'),
+  cpuSpeedBtn:document.getElementById('cpuSpeedBtn'),
+  shuffleBtn:document.getElementById('shuffleBtn'),
+  settingsBtn: document.getElementById('settingsBtn'),
+  settingsModal: document.getElementById('settingsModal'),
+  applySettingsBtn: document.getElementById('applySettingsBtn'),
+  cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
+  rulesBtn: document.getElementById('rulesBtn'),
+  rulesModal: document.getElementById('rulesModal'),
+  closeRulesBtn: document.getElementById('closeRulesBtn'),
+  rulesC8: document.getElementById('rulesC8'),
+  rulesUNO: document.getElementById('rulesUNO'),
+  logModal: document.getElementById('logModal'),
+  fullLog: document.getElementById('fullLog'),
+  closeLogBtn: document.getElementById('closeLogBtn'),
+  endGameModal: document.getElementById('endGameModal'),
+  endGameTitle: document.getElementById('endGameTitle'),
+  endGameMessage: document.getElementById('endGameMessage'),
+  endGameNewGameBtn: document.getElementById('endGameNewGameBtn'),
+  suitPickerModal: document.getElementById('suitPickerModal'),
+  suitPickerTitle: document.getElementById('suitPickerTitle'),
+  suitPickerButtons: document.getElementById('suitPickerButtons'),
+  handOverModal: document.getElementById('handOverModal'),
+  handOverMessage: document.getElementById('handOverMessage'),
+  handOverBtn: document.getElementById('handOverBtn'),
+  gameModeSelect: document.getElementById('gameModeSelect'),
+  initialHandSizeSelect: document.getElementById('initialHandSizeSelect'),
+  unoModeChk:document.getElementById('unoModeChk'),
+  reverseSkipLabel: document.getElementById('reverseSkipLabel'),
+  reverseSkipChk: document.getElementById('reverseSkipChk'),
+  mustPlayIfAbleChk:document.getElementById('mustPlayIfAbleChk'),
+  drawUntilPlayableChk:document.getElementById('drawUntilPlayableChk'),
+  allowPassChk:document.getElementById('allowPassChk'),
+  firstTurnRuleSelect: document.getElementById('firstTurnRuleSelect'),
+  // Mobile toggles elements
+  statusToggle: document.getElementById('statusToggle'),
+  logToggle: document.getElementById('logToggle'),
+  statusContent: document.getElementById('statusContent'),
+  logContent: document.getElementById('logContent'),
+  statusChevron: document.getElementById('statusChevron'),
+  logChevron: document.getElementById('logChevron'),
+  currentSuitPreview: document.getElementById('currentSuitPreview'),
+  fullLogContent: document.getElementById('fullLogContent') // Added element for full log display on mobile toggle
+};
+
+function logMsg(txt){
+  const p = document.createElement('div');
+  p.textContent = txt;
+  el.fullLogContent.prepend(p.cloneNode(true)); // Use fullLogContent for actual display
+  el.fullLog.prepend(p); // Log modal uses 'fullLog'
+  
+  // On desktop, update log preview (still keep 4 lines)
+  if (window.innerWidth > 980) {
+    el.logPreview.prepend(p.cloneNode(true));
+    while(el.logPreview.children.length > 4) {
+      el.logPreview.lastChild.remove();
+    }
+  }
+}
+
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+function cardLabel(c){if (!c) return '??'; return c.rank+(c.suit||c.color||'');}
+
+function makeDeck(){
+  if(state.unoMode){
+    let deck=[];
+    for(const color of UNO_COLORS){
+      deck.push({rank:'0',color:color,id:`${color}0`});
+      for(let i=1;i<=9;i++){deck.push({rank:i,color:color,id:`${color}${i}a`});deck.push({rank:i,color:color,id:`${color}${i}b`});}
+      for(const s of ['SKIP','REV','D2']) deck.push({rank:s,color:color,id:`${color}${s}1`}),deck.push({rank:s,color:color,id:`${color}${s}2`}); 
+    }
+    for(let i=0;i<4;i++) deck.push({rank:'WILD',color:null,id:`W${i}`});
+    return shuffle(deck);
+  } else {
+    let deck=[]; for(const s of SUITS) for(const r of RANKS) deck.push({rank:r,suit:s,id:`${r}${s}`}); return shuffle(deck);
+  }
+}
+
+function renderAll(){
+  let p1 = state.players.p1;
+  let p2 = state.players.p2;
+  let p1sTurn = state.currentPlayer === 'p1';
+  let pvp = state.gameMode === 'pvp';
+
+  if (pvp) {
+    if (p1sTurn) {
+      el.opponentCardCount.textContent = p2.length;
+      el.playerCount.textContent = p1.length;
+      el.turnLabel.textContent = "Turn: Player 1";
+      el.playerHandLabel.textContent = "Player 1's Hand";
+      el.opponentLabel.textContent = "Opponent: Player 2";
+      el.opponentHandLabel.textContent = "P2 Hand";
+    } else {
+      el.opponentCardCount.textContent = p1.length;
+      el.playerCount.textContent = p2.length;
+      el.turnLabel.textContent = "Turn: Player 2";
+      el.playerHandLabel.textContent = "Player 2's Hand";
+      el.opponentLabel.textContent = "Opponent: Player 1";
+      el.opponentHandLabel.textContent = "P1 Hand";
+    }
+  } else {
+    if (p1sTurn) {
+      el.opponentCardCount.textContent = p2.length;
+      el.playerCount.textContent = p1.length;
+      el.turnLabel.textContent = "Turn: You";
+      el.playerHandLabel.textContent = "Your Hand";
+      el.opponentLabel.textContent = "CPU";
+      el.opponentHandLabel.textContent = "CPU Hand";
+    } else {
+      el.opponentCardCount.textContent = p2.length;
+      el.playerCount.textContent = p1.length;
+      el.turnLabel.textContent = "Turn: CPU";
+      el.playerHandLabel.textContent = "Your Hand";
+      el.opponentLabel.textContent = "CPU";
+      el.opponentHandLabel.textContent = "CPU Hand";
+    }
+  }
+
+  renderDiscard();
+  el.drawPile.textContent = state.deck.length > 0 ? state.deck.length : '0';
+  const label = state.unoMode ? "Color" : "Suit";
+  const activeSuitColor = state.currentSuit || state.currentColor || '—';
+  el.currentSuit.textContent = `${label}: ${activeSuitColor}`;
+  
+  // Update mobile status preview
+  el.currentSuitPreview.textContent = activeSuitColor;
+  
+  el.passBtn.style.display = state.allowPass ? 'inline-block' : 'none';
+  el.cpuSpeedBtn.style.display = state.gameMode === 'pvc' ? 'inline-block' : 'none';
+}
+
+function renderHand(container,cards,isHuman){
+  container.innerHTML='';
+  
+  const isHandLocked = state.uiLocked && !state.isPickingSuit; 
+  container.style.opacity = (isHuman && isHandLocked) ? 0.6 : 1;
+  container.style.pointerEvents = (isHuman && isHandLocked) ? 'none' : 'auto';
+  
+  // Responsive sizing logic
+  container.classList.remove('size-m', 'size-l', 'size-xl');
+  if (isHuman && window.innerWidth <= 980) {
+     // FORCE SMALLEST SIZE (size-xl) for human hand on mobile
+     container.classList.add('size-xl'); 
+  } else {
+     // Desktop sizing logic
+    if (cards.length > 28) { container.classList.add('size-xl'); }
+    else if (cards.length > 20) { container.classList.add('size-l'); }
+    else if (cards.length > 16) { container.classList.add('size-m'); } 
+  }
+
+  cards.forEach((c,i)=>{
+    const d=document.createElement('div');
+    d.className = 'card';
+    d.title=cardLabel(c);
+    
+    if(state.unoMode) {
+      d.classList.add('uno');
+      d.innerHTML = `<div class="rank">${c.rank}</div>`;
+      if(c.color) {
+        d.dataset.color = c.color;
+      } else if (c.rank === 'WILD') {
+        d.classList.add('wild');
+      }
+    } else {
+      d.innerHTML = `<div class="rank">${c.rank}</div><div class="suit">${c.suit}</div>`;
+      if(c.suit) d.dataset.suit = c.suit;
+    }
+    
+    d.addEventListener('click',()=>attemptPlayCard(state.currentPlayer,i));
+    container.appendChild(d);
+  });
+}
+
+function renderDiscard(){
+  el.discardTop.innerHTML='';
+  const top=state.discard[state.discard.length-1];
+  
+  if(top){
+    el.discardTop.className = 'card';
+    el.discardTop.title = cardLabel(top);
+    
+    if(state.unoMode) {
+      el.discardTop.classList.add('uno');
+      el.discardTop.innerHTML = `<div class="rank">${top.rank}</div>`;
+      if(top.color) {
+        el.discardTop.dataset.color = top.color;
+      } else if (top.rank === 'WILD') {
+        el.discardTop.classList.add('wild');
+      }
+      delete el.discardTop.dataset.suit;
+    } else {
+      el.discardTop.innerHTML = `<div class="rank">${top.rank}</div><div class="suit">${top.suit}</div>`;
+      if(top.suit) el.discardTop.dataset.suit = top.suit;
+      delete el.discardTop.dataset.color;
+      el.discardTop.classList.remove('uno', 'wild');
+    }
+
+    if (top.rank === '8' || top.rank === 'WILD') {
+      const activeSuit = state.currentSuit; 
+      if (activeSuit) {
+        const overlay = document.createElement('div');
+        overlay.className = 'wild-suit-indicator';
+        overlay.textContent = activeSuit;
+        if (state.unoMode) {
+          overlay.dataset.color = activeSuit;
+        } else {
+          overlay.dataset.suit = activeSuit;
+        }
+        el.discardTop.appendChild(overlay);
+      }
+    }
+  }
+  else {
+    el.discardTop.innerHTML = '—';
+    el.discardTop.className = 'card';
+  }
+}
+
+function legalPlay(c){
+  const top=state.discard[state.discard.length-1];
+  if(!top) return true;
+  if(state.unoMode){
+    if(c.rank==='WILD') return true;
+    if(state.currentColor && c.color === state.currentColor) return true;
+    if(c.rank===top.rank) return true;
+    return false;
+  } else {
+    return c.suit===state.currentSuit||c.rank===top.rank||c.rank==='8';
+  }
+}
+
+function applySpecial(card,player){
+  let skipNext = false;
+  if(!state.unoMode) return skipNext;
+  
+  const nextPlayer = (player === 'p1') ? 'p2' : 'p1';
+  const nextPlayerName = (state.gameMode === 'pvc' && nextPlayer === 'p2') ? 'CPU' : `Player ${nextPlayer.substring(1)}`;
+
+  if(card.rank==='SKIP'){
+    logMsg(`${nextPlayerName} is skipped!`);
+    skipNext = true;
+  }
+  if(card.rank==='REV'){
+    if(state.gameMode === 'pvp' && !state.reverseSkip) {
+      skipNext = false;
+    } else {
+      logMsg(`${nextPlayerName} is skipped!`);
+      skipNext = true;
+    }
+  }
+  if(card.rank==='D2'){
+    logMsg(`Draw 2 played! ${nextPlayerName} must draw 2.`);
+    state.pendingDraw = 2; 
+    skipNext = true;
+  }
+  return skipNext;
+}
+
+// --- Player Turn Management ---
+
+function resolveDrawPenalty(player, nextPlayerFunction) {
+  const drawAmount = state.pendingDraw;
+  state.pendingDraw = 0; 
+  
+  const playerName = (player === 'p1') ? 'Player 1' : (state.gameMode === 'pvc' ? 'CPU' : 'Player 2');
+  logMsg(`Penalty: ${playerName} must draw ${drawAmount} cards and is skipped.`);
+  updateStatus(`${playerName} drawing penalty cards and skipping turn...`);
+
+  for (let i = 0; i < drawAmount; i++) {
+    drawCardForPlayer(player);
+  }
+
+  renderAll(); 
+  renderHand(el.playerHand, state.players.p1, true);
+
+  setTimeout(() => {
+    logMsg(`${playerName} skipped.`);
+    updateStatus(`${playerName} was skipped. Passing turn...`);
+    nextPlayerFunction(); 
+  }, state.cpuPlayDelay / 2);
+}
+
+function passTurnToP1_Human() {
+  state.currentPlayer = 'p1';
+  if (state.pendingDraw > 0) {
+    resolveDrawPenalty('p1', passTurnToCPU); 
+    return;
+  }
+  el.opponentInfo.textContent = "waiting";
+  updateStatus("Your turn.");
+  state.uiLocked = false;
+  renderAll();
+  renderHand(el.playerHand, state.players.p1, true);
+}
+
+function passTurnToCPU() {
+  state.currentPlayer = 'p2';
+  state.uiLocked = true;
+  if (state.pendingDraw > 0) {
+    resolveDrawPenalty('p2', passTurnToP1_Human); 
+    return;
+  }
+  el.opponentInfo.textContent = "thinking...";
+  updateStatus("CPU thinking...");
+  renderAll();
+  setTimeout(cpuTurn, state.cpuPlayDelay);
+}
+
+function showP1Hand(isFirstTurn = false) {
+  el.handOverModal.classList.remove('visible');
+  state.currentPlayer = 'p1';
+  
+  if (state.pendingDraw > 0) {
+    resolveDrawPenalty('p1', passTurnToP2); 
+    return;
+  }
+  
+  updateStatus("Player 1's turn.");
+  state.uiLocked = false;
+  renderAll();
+  renderHand(el.playerHand, state.players.p1, true);
+  if(isFirstTurn) logMsg("Game started. Player 1's turn.");
+}
+
+function showP2Hand(isFirstTurn = false) {
+  el.handOverModal.classList.remove('visible');
+  state.currentPlayer = 'p2';
+  
+  if (state.pendingDraw > 0) {
+    resolveDrawPenalty('p2', passTurnToP1); 
+    return;
+  }
+  
+  updateStatus("Player 2's turn.");
+  state.uiLocked = false;
+  renderAll();
+  renderHand(el.playerHand, state.players.p2, true);
+  if(isFirstTurn) logMsg("Game started. Player 2's turn.");
+}
+
+function passTurnToP1() {
+  state.uiLocked = true;
+  el.playerHand.style.opacity = 0;
+  el.handOverMessage.textContent = "Pass to Player 1. Click OK when ready."
+  el.handOverModal.classList.add('visible');
+  el.handOverBtn.onclick = showP1Hand;
+}
+
+function passTurnToP2() {
+  state.uiLocked = true;
+  el.playerHand.style.opacity = 0;
+  el.handOverMessage.textContent = "Pass to Player 2. Click OK when ready."
+  el.handOverModal.classList.add('visible');
+  el.handOverBtn.onclick = showP2Hand;
+}
+
+
+// --- CPU Logic (Only for PVC mode) ---
+
+function cpuTurn(){
+  if(state.gameMode !== 'pvc' || state.currentPlayer !== 'p2') return;
+
+  logMsg('--- CPU TURN START ---'); 
+  el.opponentInfo.textContent = "thinking...";
+  const hand=state.players.p2;
+  
+  let cardToPlay = null;
+  let cardIndex = -1;
+  
+  for(let i=0; i<hand.length; i++){
+    if(legalPlay(hand[i])){
+        cardToPlay = hand[i];
+        cardIndex = i;
+        break;
+    }
+  }
+
+  if(cardToPlay){
+    logMsg('CPU found playable card: ' + cardLabel(cardToPlay));
+    cpuPlayCard(cardIndex);
+    return;
+  }
+
+  logMsg(`CPU found NO playable cards. Current target: ${state.currentSuit || state.currentColor}.`);
+
+  if(state.drawUntilPlayable) {
+    logMsg('CPU beginning draw-until-playable loop.');
+    cpuDrawLoop(); 
+    return;
+  } else {
+    logMsg('CPU drawing one card.');
+    const drawn = drawCardForPlayer('p2');
+    if (drawn) {
+        logMsg('CPU drew and passes turn.');
+    } else {
+        logMsg('CPU failed to draw and passes turn.');
+    }
+    passTurnToP1_Human();
+    return;
+  }
+}
+
+function cpuPlayCard(idx) {
+  const cardPlayed = state.players.p2.splice(idx, 1)[0];
+  state.discard.push(cardPlayed);
+  logMsg(`CPU played ${cardLabel(cardPlayed)}`);
+  
+  if(cardPlayed.rank==='8'||cardPlayed.rank==='WILD'){
+    state.currentSuit=chooseSuit('p2',cardPlayed);
+    state.currentColor=state.unoMode ? state.currentSuit : null;
+    logMsg(`CPU changed color/suit to ${state.currentSuit}`);
+  } else{
+    state.currentSuit=cardPlayed.suit||cardPlayed.color;
+    state.currentColor=cardPlayed.color; 
+  }
+
+  const skipTurn = applySpecial(cardPlayed, 'p2');
+  if(checkWin()) return;
+  
+  if(skipTurn) {
+    logMsg('CPU skipped Player 1 and plays again.');
+    updateStatus("CPU skipped your turn. CPU playing again...");
+    el.opponentInfo.textContent = "playing again";
+    renderAll();
+    setTimeout(cpuTurn, state.cpuPlayDelay);
+  } else {
+    passTurnToP1_Human();
+  }
+}
+
+function cpuDrawLoop() {
+  if (state.gameMode !== 'pvc' || state.currentPlayer !== 'p2') return; 
+
+  const drawnCard = drawCardForPlayer('p2');
+  
+  if (!drawnCard) {
+    logMsg("CPU cannot draw and must pass.");
+    passTurnToP1_Human();
+    return;
+  }
+
+  if (legalPlay(drawnCard)) {
+    logMsg('CPU auto-playing drawn card.');
+    const idx = state.players.p2.lastIndexOf(drawnCard);
+    cpuPlayCard(idx); 
+  } else {
+    logMsg('CPU draws again...');
+    setTimeout(cpuDrawLoop, state.cpuPlayDelay); 
+  }
+}
+
+// --- End of CPU Logic ---
+
+
+function chooseSuit(playerType,card){
+  const hand=state.players[playerType];
+  if(state.unoMode){
+    let counts={R:0,G:0,B:0,Y:0};
+    hand.forEach(c=>{if(c.color) counts[c.color]++;});
+    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b, UNO_COLORS[0]);
+  } else{
+    let counts={'♠':0,'♥':0,'♦':0,'♣':0};
+    hand.forEach(c=>{if(c.suit) counts[c.suit]++;});
+    return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b, SUITS[0]);
+  }
+}
+
+function drawCardForPlayer(player) {
+  if(state.deck.length === 0) {
+    logMsg("Deck is empty. Attempting to shuffle discard pile...");
+    if(state.discard.length <= 1) {
+      logMsg("No cards in discard to shuffle. Cannot draw.");
+      return false;
+    }
+    el.shuffleBtn.click();
+    logMsg('Shuffling takes a moment...');
+  }
+
+  if(state.deck.length === 0) {
+     logMsg("Deck is still empty after shuffle attempt. Cannot draw.");
+     return false;
+  }
+
+  const c = state.deck.shift();
+  state.players[player].push(c);
+  
+  return c;
+}
+
+function playerDraw() {
+  const drawnCard = drawCardForPlayer(state.currentPlayer);
+
+  if (!drawnCard) {
+    return 'draw_failed'; 
+  }
+  
+  const playerName = state.currentPlayer === 'p1' ? 'Player 1' : 'Player 2';
+  logMsg(`${playerName} drew ${cardLabel(drawnCard)}.`);
+
+  if(state.drawUntilPlayable) {
+    if (legalPlay(drawnCard)) {
+      updateStatus(`You drew ${cardLabel(drawnCard)}. You can play it, draw again, or pass.`);
+    } else {
+      updateStatus(`You drew ${cardLabel(drawnCard)}. Not playable. Draw again or pass.`);
+    }
+    return 'can_draw_again'; 
+  }
+  
+  return 'drew_and_pass'; 
+}
+
+function attemptPlayCard(player,idx){
+  if(state.currentPlayer!==player){updateStatus("Not your turn");return;}
+  if(state.uiLocked) return;
+  
+  const hand=state.players[player];const card=hand[idx];
+  
+  if(!legalPlay(card)){updateStatus("Illegal play");return;}
+  
+  hand.splice(idx,1);state.discard.push(card);
+  const playerName = (player === 'p1') ? 'Player 1' : (state.gameMode === 'pvc' ? 'CPU' : 'Player 2');
+  logMsg(`${playerName} played ${cardLabel(card)}`);
+  
+  if(checkWin()) return;
+  
+  let skipTurn = false;
+  
+  if(card.rank==='8'||card.rank==='WILD'){
+    updateStatus("Choose a suit/color.");
+    state.uiLocked = true;
+    state.isPickingSuit = true;
+    // Rerender hand *before* showing modal to ensure visibility is correct
+    renderHand(el.playerHand, hand, true); 
+    showSuitPickerModal(card); 
+    return;
+  }
+  else{
+    state.currentSuit=card.suit||card.color;
+    state.currentColor=card.color; 
+    skipTurn = applySpecial(card, player);
+  }
+
+  if(player==='p1'){
+      if(skipTurn){
+          updateStatus("You skipped the opponent. Play again.");
+          state.uiLocked = false;
+          renderAll();
+          renderHand(el.playerHand, state.players.p1, true);
+      } else {
+          if (state.gameMode === 'pvc') passTurnToCPU();
+          else passTurnToP2();
+      }
+  } else {
+      if(skipTurn){
+          updateStatus("You skipped Player 1. Play again.");
+          state.uiLocked = false;
+          renderAll();
+          renderHand(el.playerHand, state.players.p2, true);
+      } else {
+          passTurnToP1();
+      }
+  }
+}
+
+function showSuitPickerModal(card=null){
+  const modal = el.suitPickerModal;
+  const title = el.suitPickerTitle;
+  const buttonContainer = el.suitPickerButtons;
+  const player = state.currentPlayer;
+  
+  buttonContainer.innerHTML = '';
+  
+  let choices = [];
+  if(state.unoMode) {
+    title.textContent = 'Choose a color:';
+    choices = [
+      { suit: 'R', text: 'Red' },
+      { suit: 'G', text: 'Green' },
+      { suit: 'B', text: 'Blue' },
+      { suit: 'Y', text: 'Yellow' }
+    ];
+  } else {
+    title.textContent = 'Choose a suit:';
+    choices = [
+      { suit: '♠', text: '♠ Spades' },
+      { suit: '♥', text: '♥ Hearts' },
+      { suit: '♦', text: '♦ Diamonds' },
+      { suit: '♣', text: '♣ Clubs' }
+    ];
+  }
+  
+  choices.forEach(choice => {
+    const b = document.createElement('button');
+    b.className = 'suit-btn';
+    b.dataset.suit = choice.suit;
+    b.innerHTML = choice.text;
+    
+    if(state.unoMode) b.dataset.color = choice.suit;
+    else if(choice.suit === '♥' || choice.suit === '♦') b.dataset.suit = choice.suit;
+
+    b.onclick = () => {
+      state.currentSuit = b.dataset.suit;
+      state.currentColor = state.unoMode ? b.dataset.suit : null;
+      
+      const skipTurn = applySpecial(card, player);
+      const playerName = (player === 'p1') ? 'Player 1' : 'Player 2';
+      logMsg(`${playerName} changed ${state.unoMode ? 'color' : 'suit'} to ${state.currentSuit}`);
+      
+      modal.classList.remove('visible'); 
+      state.isPickingSuit = false;
+      
+      if(checkWin()) return;
+
+      if(player==='p1'){
+          if(skipTurn){
+              updateStatus("You skipped the opponent. Play again.");
+              state.uiLocked = false;
+              renderAll();
+              renderHand(el.playerHand, state.players.p1, true);
+          } else {
+              if (state.gameMode === 'pvc') passTurnToCPU();
+              else passTurnToP2();
+          }
+      } else {
+          if(skipTurn){
+              updateStatus("You skipped Player 1. Play again.");
+              state.uiLocked = false;
+              renderAll();
+              renderHand(el.playerHand, state.players.p2, true);
+          } else {
+              passTurnToP1();
+          }
+      }
+    };
+    buttonContainer.appendChild(b);
+  });
+    
+  modal.classList.add('visible'); 
+}
+
+function checkWin(){
+  let winner = null;
+  if(state.players.p1.length===0) winner = 'p1';
+  else if(state.players.p2.length===0) winner = 'p2';
+  
+  if(winner){
+    state.uiLocked = true;
+    renderAll();
+    
+    const p1Name = "Player 1";
+    const p2Name = state.gameMode === 'pvc' ? "CPU" : "Player 2";
+    const winnerName = winner === 'p1' ? p1Name : p2Name;
+    const loserName = winner === 'p1' ? p2Name : p1Name;
+
+    const msg = winnerName === 'Player 1' 
+      ? `You (${p1Name}) win! 🎉` 
+      : `${winnerName} wins. Better luck next time, ${loserName}.`;
+    
+    const title = winnerName === 'p1' ? "Congratulations!" : "Game Over";
+
+    updateStatus(msg);
+    logMsg(msg);
+    state.lastWinner = winner;
+
+    el.endGameTitle.textContent = title;
+    el.endGameMessage.textContent = msg;
+    el.endGameModal.classList.add('visible');
+    
+    return true;
+  }
+  return false;
+}
+
+function updateStatus(txt){el.statusText.textContent=txt;}
+
+// --- NEW: Toggle Functions ---
+function toggleLog() {
+    // Toggles the visibility of the log content area
+    const isCollapsed = el.logContent.classList.toggle('collapsed');
+    el.logChevron.textContent = isCollapsed ? '▼' : '▲';
+    
+    // On mobile, show the actual full log content when expanded
+    if (window.innerWidth <= 980) {
+      el.fullLogContent.style.display = isCollapsed ? 'none' : 'block';
+    }
+}
+
+function toggleStatus() {
+    // Toggles the visibility of the status content area
+    const isCollapsed = el.statusContent.classList.toggle('collapsed');
+    el.statusChevron.textContent = isCollapsed ? '▼' : '▲';
+    
+    // On mobile, the status content is also hidden/shown directly
+    if (window.innerWidth <= 980) {
+      el.statusContent.style.display = isCollapsed ? 'none' : 'block';
+    }
+}
+
+// --- Event Listeners ---
+
+el.newGameBtn.addEventListener('click',()=>startGame());
+el.drawBtn.addEventListener('click',()=>{
+  if(state.currentPlayer!=='p1' && state.gameMode === 'pvc'){updateStatus("Not your turn");return;}
+  if(state.uiLocked) return;
+
+  if(state.mustPlayIfAble) {
+    const hand = state.players[state.currentPlayer];
+    const hasPlayableCard = hand.some(c => legalPlay(c));
+    if(hasPlayableCard) {
+      updateStatus("'Must Play If Able' is ON. You have a playable card and cannot draw.");
+      return;
+    }
+  }
+  
+  const drawResult = playerDraw(); 
+  const handToRender = state.players[state.currentPlayer];
+  
+  switch(drawResult) {
+    case 'can_draw_again':
+      renderAll();
+      renderHand(el.playerHand, handToRender, true);
+      break;
+    case 'drew_and_pass':
+      if (state.gameMode === 'pvc') {
+        passTurnToCPU();
+      } else {
+        if (state.currentPlayer === 'p1') passTurnToP2();
+        else passTurnToP1();
+      }
+      break;
+    case 'draw_failed':
+      renderAll();
+      renderHand(el.playerHand, handToRender, true);
+      break;
+  }
+});
+
+el.passBtn.addEventListener('click',()=>{
+  if(state.currentPlayer!=='p1' && state.gameMode === 'pvc'){updateStatus("Not your turn");return;}
+  if(state.uiLocked) return;
+  if(!state.allowPass){updateStatus("Passing is disabled by game settings.");return;}
+  
+  const hand = state.players[state.currentPlayer];
+  const playable = hand.some(c => legalPlay(c));
+  if(playable){
+    updateStatus("You have a playable card — you cannot pass.");
+    return;
+  }
+  
+  const playerName = state.currentPlayer === 'p1' ? 'Player 1' : 'Player 2';
+  logMsg(`${playerName} passed`);
+
+  if (state.gameMode === 'pvc') {
+    passTurnToCPU();
+  } else {
+    if (state.currentPlayer === 'p1') passTurnToP2();
+    else passTurnToP1();
+  }
+});
+
+el.hintBtn.addEventListener('click',()=>{
+  const hand = state.players[state.currentPlayer];
+  const h=hand.find(c=>legalPlay(c));
+  updateStatus(h?`Hint: play ${cardLabel(h)}`:'Hint: no playable cards. Draw or Pass.');
+});
+
+el.cpuSpeedBtn.addEventListener('click',()=>{
+  if(state.cpuPlayDelay === 700) {
+    state.cpuPlayDelay = 0;
+    el.cpuSpeedBtn.textContent = 'CPU Speed: Instant';
+  } else {
+    state.cpuPlayDelay = 700;
+    el.cpuSpeedBtn.textContent = 'CPU Speed: Normal';
+  }
+});
+
+el.shuffleBtn.addEventListener('click',()=>{
+  if(state.discard.length<=1){updateStatus("Not enough discard");return;}
+  const top=state.discard.pop();
+  state.deck=shuffle(state.deck.concat(state.discard));
+  state.discard=[top];
+  renderAll();
+  logMsg('Shuffled discard into deck.');
+});
+
+el.drawPile.addEventListener('click',()=>el.drawBtn.click());
+
+el.settingsBtn.addEventListener('click', () => {
+  el.gameModeSelect.value = state.gameMode;
+  el.initialHandSizeSelect.value = state.initialHandSize.toString();
+  el.unoModeChk.checked = state.unoMode;
+  el.reverseSkipChk.checked = state.reverseSkip;
+  el.mustPlayIfAbleChk.checked = state.mustPlayIfAble;
+  el.drawUntilPlayableChk.checked = state.drawUntilPlayable;
+  el.allowPassChk.checked = state.allowPass;
+  el.firstTurnRuleSelect.value = state.firstTurnRule;
+  
+  el.reverseSkipLabel.style.display = state.unoMode ? 'flex' : 'none';
+  el.settingsModal.classList.add('visible');
+});
+
+el.unoModeChk.addEventListener('change', () => {
+  el.reverseSkipLabel.style.display = el.unoModeChk.checked ? 'flex' : 'none';
+});
+
+el.cancelSettingsBtn.addEventListener('click', () => {
+  el.settingsModal.classList.remove('visible');
+});
+
+el.applySettingsBtn.addEventListener('click', () => {
+  state.gameMode = el.gameModeSelect.value;
+  state.initialHandSize = parseInt(el.initialHandSizeSelect.value);
+  state.unoMode = el.unoModeChk.checked;
+  state.reverseSkip = el.reverseSkipChk.checked;
+  state.mustPlayIfAble = el.mustPlayIfAbleChk.checked;
+  state.drawUntilPlayable = el.drawUntilPlayableChk.checked;
+  state.allowPass = el.allowPassChk.checked;
+  state.firstTurnRule = el.firstTurnRuleSelect.value;
+  
+  el.settingsModal.classList.remove('visible');
+  startGame(true);
+});
+
+el.rulesBtn.addEventListener('click', () => {
+  if(state.unoMode) {
+    el.rulesC8.style.display = 'none';
+    el.rulesUNO.style.display = 'block';
+  } else {
+    el.rulesC8.style.display = 'block';
+    el.rulesUNO.style.display = 'none';
+  }
+  el.rulesModal.classList.add('visible');
+});
+
+el.closeRulesBtn.addEventListener('click', () => {
+  el.rulesModal.classList.remove('visible');
+});
+
+el.logToggle.addEventListener('click', toggleLog); // Use the mobile toggle for log access
+el.statusToggle.addEventListener('click', toggleStatus); // Use the mobile toggle for status access
+
+// Allow desktop users to click the preview to open the full log too.
+if (window.innerWidth > 980) {
+    el.logPreview.addEventListener('click', () => {
+      el.logModal.classList.add('visible');
+    });
+}
+
+
+el.closeLogBtn.addEventListener('click', () => {
+  el.logModal.classList.remove('visible');
+});
+
+el.endGameNewGameBtn.addEventListener('click', () => {
+  el.endGameModal.classList.remove('visible');
+  startGame();
+});
+
+function startGame(settingsChanged = false){
+  if(settingsChanged) {
+    state.lastWinner = null;
+  }
+  
+  state.gameMode = el.gameModeSelect.value;
+  el.endGameModal.classList.remove('visible');
+  el.suitPickerModal.classList.remove('visible'); 
+  el.handOverModal.classList.remove('visible');
+
+  state.deck=makeDeck();
+  state.players.p1=state.deck.splice(0,state.initialHandSize);
+  state.players.p2=state.deck.splice(0,state.initialHandSize);
+  
+  state.pendingDraw = 0;
+  state.isPickingSuit = false;
+
+  let first; 
+  do {
+    if(state.deck.length === 0) state.deck = makeDeck();
+    first=state.deck.shift();
+    if (first) {
+      state.discard=[first];
+    } else {
+      state.deck = makeDeck(); 
+      first = state.deck.shift();
+      state.discard = [first];
+    }
+  } while(first.rank==='8'||first.rank==='WILD'|| (state.unoMode && ['SKIP','REV','D2'].includes(first.rank)));
+  
+  state.currentSuit=first.suit||first.color;
+  state.currentColor=first.color||first.suit;
+  
+  let firstPlayer = 'p1';
+  switch (state.firstTurnRule) {
+    case 'p2':
+      firstPlayer = 'p2';
+      break;
+    case 'random':
+      firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
+      break;
+    case 'loser':
+      if (state.lastWinner === 'p1') firstPlayer = 'p2';
+      else if (state.lastWinner === 'p2') firstPlayer = 'p1';
+      else firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
+      break;
+    case 'p1':
+    default:
+      firstPlayer = 'p1';
+      break;
+  }
+  state.currentPlayer = firstPlayer;
+  state.uiLocked = false;
+
+  el.logPreview.innerHTML='';
+  el.fullLog.innerHTML='';
+  el.fullLogContent.innerHTML=''; // Clear mobile log display
+
+  // NEW: Ensure status and log start collapsed on mobile layout
+  if (window.innerWidth <= 980) {
+      el.logContent.classList.add('collapsed');
+      el.logChevron.textContent = '▼';
+      el.statusContent.classList.add('collapsed');
+      el.statusChevron.textContent = '▼';
+      el.statusContent.style.display = 'none'; // Hide the div itself
+      el.fullLogContent.style.display = 'none'; // Hide mobile log display
+  } else {
+      el.statusContent.style.display = 'block'; // Show on desktop
+  }
+
+
+  const startMsg = `Game started. Top: ${cardLabel(first)}. ${state.unoMode ? 'Color' : 'Suit'}: ${state.currentSuit}`;
+  logMsg(startMsg);
+
+  if (firstPlayer === 'p1') {
+    showP1Hand(true);
+    updateStatus("Player 1's turn.");
+  } else {
+    state.currentPlayer = 'p2';
+    if (state.gameMode === 'pvc') {
+      state.uiLocked = true;
+      renderAll();
+      renderHand(el.playerHand, state.players.p1, true);
+      updateStatus("CPU's turn.");
+      el.opponentInfo.textContent = "playing...";
+      setTimeout(cpuTurn, state.cpuPlayDelay);
+    } else {
+      state.uiLocked = true;
+      renderAll();
+      renderHand(el.playerHand, state.players.p1, true);
+      el.playerHand.style.opacity = 0;
+      el.handOverMessage.textContent = "Start game! Pass to Player 2. Click OK."
+      el.handOverModal.classList.add('visible');
+      el.handOverBtn.onclick = () => showP2Hand(true);
+    }
+  }
+}
+
+// Start on load
+startGame();
+</script>
+</body>
+</html>
