@@ -197,6 +197,13 @@
   
   .modal-overlay{display:none;position:fixed;z-index:100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);align-items:center;justify-content:center}
   .modal-overlay.visible{display:flex}
+  
+  /* FIX: Remove blur for suit picker, keep screen dim */
+  .modal-overlay.no-blur {
+      backdrop-filter: none;
+      background: rgba(0,0,0,0.8);
+  }
+  
   .modal-panel{background:var(--panel);border-radius:12px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.4);min-width:320px; max-width: 500px;}
   .modal-panel h2{margin:0 0 16px 0;font-size:18px}
   .modal-panel .settings-group{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
@@ -219,22 +226,23 @@
     /* Header adjustments for mobile */
     header { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 8px; }
     h1 { text-align: center; font-size: 18px; }
-    .controls { justify-content: space-between; gap: 8px; }
+    
+    /* FIX: Allow controls to wrap and use smaller buttons */
+    .controls { justify-content: center; flex-wrap: wrap; gap: 8px; }
     .control-group { 
       justify-content: center; 
       gap: 8px; 
     }
-    .controls { flex-wrap: nowrap; }
     .controls .control-group:first-child { order: 1; } 
     .controls .control-group:last-child { order: 2; } 
     
     header .controls button {
-      padding: 6px 8px;
-      font-size: 12px;
+      padding: 5px 7px; /* Reduced from 6/8 */
+      font-size: 11px; /* Reduced from 12 */
     }
     header .controls button.secondary {
-      padding: 5px 7px;
-      font-size: 12px;
+      padding: 4px 6px; /* Reduced from 5/7 */
+      font-size: 11px; /* Reduced from 12 */
     }
     
     /* Layout adjustments for mobile */
@@ -483,8 +491,8 @@
           <li><b>Action Cards (1v1 Rules):</b>
             <ul>
               <li><b>SKIP:</b> The other player is skipped. You play again.</li>
-              <li><b>REV (Reverse):</b> The other player is skipped. You play again. (This can be changed in Settings).</li>
-              <li><b>D2 (Draw 2):</b> The other player must draw 2 cards and is skipped. You play again. **(The draw penalty is applied at the start of the next player's turn)**.</li>
+              <li><b>REV (Reverse):</b> If "2P Reverse acts as Skip" is ON, the other player is skipped. Otherwise, the turn passes normally.</li>
+              <li><b>D2 (Draw 2):</b> The other player must draw 2 cards. If "Reverse acts as Skip" is ON, the other player is skipped (you play again). Otherwise, they play after drawing. **(The draw penalty is applied at the start of the next player's turn)**.</li>
             </ul>
           </li>
         </ul>
@@ -516,7 +524,7 @@
   </div>
 </div>
 
-<div id="suitPickerModal" class="modal-overlay">
+<div id="suitPickerModal" class="modal-overlay no-blur">
   <div class="modal-panel">
     <h2 id="suitPickerTitle">Choose a Suit</h2>
     <div id="suitPickerButtons">
@@ -827,19 +835,31 @@ function applySpecial(card,player){
     logMsg(`${nextPlayerName} is skipped!`);
     skipNext = true;
   }
+  
+  // FIX: Apply conditional skip for REV and D2 based on toggle
   if(card.rank==='REV'){
-    if(state.gameMode === 'pvp' && !state.reverseSkip) {
-      skipNext = false;
-    } else {
-      logMsg(`${nextPlayerName} is skipped!`);
+    if(state.reverseSkip) {
+      logMsg(`Reverse played! ${nextPlayerName} is skipped!`);
       skipNext = true;
+    } else {
+      logMsg(`Reverse played! Turn passes normally.`);
+      skipNext = false;
     }
   }
+
   if(card.rank==='D2'){
     logMsg(`Draw 2 played! ${nextPlayerName} must draw 2.`);
     state.pendingDraw = 2; 
-    skipNext = true;
+    if(state.reverseSkip) {
+      logMsg(`Draw 2 also skips the next player (Reverse/D2 Skip setting is ON).`);
+      skipNext = true;
+    } else {
+      logMsg(`Draw 2 played. Turn passes normally, next player will take penalty and play.`);
+      skipNext = false;
+    }
   }
+  // END FIX
+  
   return skipNext;
 }
 
@@ -849,21 +869,45 @@ function resolveDrawPenalty(player, nextPlayerFunction) {
   const drawAmount = state.pendingDraw;
   state.pendingDraw = 0; 
   
-  const playerName = (player === 'p1') ? 'Player 1' : (state.gameMode === 'pvc' ? 'CPU' : 'Player 2');
-  logMsg(`Penalty: ${playerName} must draw ${drawAmount} cards and is skipped.`);
-  updateStatus(`${playerName} drawing penalty cards and skipping turn...`);
+  // Flag to check if the action card dictates a skip (toggle is ON)
+  const wasSkip = state.reverseSkip; 
 
+  const playerName = (player === 'p1') ? 'Player 1' : (state.gameMode === 'pvc' ? 'CPU' : 'Player 2');
+  logMsg(`Penalty: ${playerName} must draw ${drawAmount} cards.`);
+  updateStatus(`${playerName} drawing penalty cards...`);
+
+  // 1. Draw Cards
   for (let i = 0; i < drawAmount; i++) {
     drawCardForPlayer(player);
   }
 
+  // 2. Rerender immediately to show new card count/hand
   renderAll(); 
-  renderHand(el.playerHand, state.players.p1, true);
+  if (player === 'p1' || state.gameMode === 'pvp') { 
+     renderHand(el.playerHand, state.players[player], true);
+  }
 
+  // 3. Turn Continuation Logic
   setTimeout(() => {
-    logMsg(`${playerName} skipped.`);
-    updateStatus(`${playerName} was skipped. Passing turn...`);
-    nextPlayerFunction(); 
+    if (wasSkip) {
+      // Standard UNO D2 behavior (draw and skip)
+      logMsg(`${playerName} skipped.`);
+      updateStatus(`${playerName} was skipped. Passing turn...`);
+      nextPlayerFunction(); // Pass to the player *after* the current player
+    } else {
+      // User's custom D2 behavior (draw but play)
+      logMsg(`${playerName} finishes drawing penalty cards and starts their turn.`);
+      updateStatus(`${playerName}'s turn.`);
+      
+      if (player === 'p2' && state.gameMode === 'pvc') {
+        // CPU continues its turn
+        cpuTurn(); 
+      } else {
+        // Human player (P1 or P2 in PVP) now gets to play.
+        state.uiLocked = false; 
+        renderAll();
+      }
+    }
   }, state.cpuPlayDelay / 2);
 }
 
@@ -1123,7 +1167,6 @@ function attemptPlayCard(player,idx){
     updateStatus("Choose a suit/color.");
     state.uiLocked = true;
     state.isPickingSuit = true;
-    // Removed old redundant renderHand call here, as it's now done above.
     showSuitPickerModal(card); 
     return;
   }
