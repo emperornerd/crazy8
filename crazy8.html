@@ -876,12 +876,17 @@ function resolveDrawPenalty(player, nextPlayerFunction) {
   logMsg(`Penalty: ${playerName} must draw ${drawAmount} cards.`);
   updateStatus(`${playerName} drawing penalty cards...`);
 
+  // FIX 1: Explicitly lock the UI during the penalty draw sequence for human players
+  if (player === 'p1' || state.gameMode === 'pvp') { 
+      state.uiLocked = true; 
+  }
+  
   // 1. Draw Cards
   for (let i = 0; i < drawAmount; i++) {
     drawCardForPlayer(player);
   }
 
-  // 2. Rerender immediately to show new card count/hand
+  // 2. Rerender immediately to show new card count/hand (still locked)
   renderAll(); 
   if (player === 'p1' || state.gameMode === 'pvp') { 
      renderHand(el.playerHand, state.players[player], true);
@@ -906,6 +911,8 @@ function resolveDrawPenalty(player, nextPlayerFunction) {
         // Human player (P1 or P2 in PVP) now gets to play.
         state.uiLocked = false; 
         renderAll();
+        // FIX 2: Re-render P1/P2's hand here to ensure all card click handlers are active after the unlock
+        renderHand(el.playerHand, state.players[player], true); 
       }
     }
   }, state.cpuPlayDelay / 2);
@@ -1174,6 +1181,12 @@ function attemptPlayCard(player,idx){
     state.currentSuit=card.suit||card.color;
     state.currentColor=card.color; 
     skipTurn = applySpecial(card, player);
+
+    // FIX FOR SKIP: Explicitly ensure a SKIP card always forces a 'play again' (which is the skip in 1v1).
+    // This is done to override any potential unintended side effects from combined action card logic.
+    if (state.unoMode && card.rank === 'SKIP') {
+        skipTurn = true; 
+    }
   }
 
   if(player==='p1'){
@@ -1239,6 +1252,10 @@ function showSuitPickerModal(card=null){
       state.currentColor = state.unoMode ? b.dataset.suit : null;
       
       const skipTurn = applySpecial(card, player);
+      
+      // Note: WILD cards (which are the only ones requiring a picker here in UNO mode)
+      // do not cause a skip, so skipTurn will be false unless a WILD DRAW 4 was added.
+
       const playerName = (player === 'p1') ? 'Player 1' : 'Player 2';
       logMsg(`${playerName} changed ${state.unoMode ? 'color' : 'suit'} to ${state.currentSuit}`);
       
