@@ -446,7 +446,7 @@
         </select>
       </label>
       <label class="secondary">UNO Mode <input type="checkbox" id="unoModeChk"></label>
-      <label class="secondary" id="reverseSkipLabel" style="display: none;">2P Reverse acts as Skip <input type="checkbox" id="reverseSkipChk"></label>
+      <label class="secondary" id="reverseSkipLabel" style="display: none;">2P Reverse & D2 act as Skip <input type="checkbox" id="reverseSkipChk"></label>
       <label class="secondary">Must Play If Able <input type="checkbox" id="mustPlayIfAbleChk"></label>
       <label class="secondary">Draw Until Playable <input type="checkbox" id="drawUntilPlayableChk"></label>
       <label class="secondary">Allow Pass <input type="checkbox" id="allowPassChk"></label>
@@ -491,8 +491,8 @@
           <li><b>Action Cards (1v1 Rules):</b>
             <ul>
               <li><b>SKIP:</b> The other player is skipped. You play again.</li>
-              <li><b>REV (Reverse):</b> If "2P Reverse acts as Skip" is ON, the other player is skipped. Otherwise, the turn passes normally.</li>
-              <li><b>D2 (Draw 2):</b> The other player must draw 2 cards. If "Reverse acts as Skip" is ON, the other player is skipped (you play again). Otherwise, they play after drawing. **(The draw penalty is applied at the start of the next player's turn)**.</li>
+              <li><b>REV (Reverse):</b> If "2P Reverse & D2 act as Skip" is ON, the other player is skipped. Otherwise, the turn passes normally.</li>
+              <li><b>D2 (Draw 2):</b> The other player must draw 2 cards. If "Reverse & D2 act as Skip" is ON, the other player is skipped (you play again). Otherwise, they play after drawing. **(The draw penalty is applied at the start of the next player's turn)**.</li>
             </ul>
           </li>
         </ul>
@@ -812,6 +812,10 @@ function renderDiscard(){
 }
 
 function legalPlay(c){
+  if (state.pendingDraw > 0 && state.unoMode) {
+    // If there is a penalty, the ONLY legal play is a D2.
+    return c.rank === 'D2';
+  }
   const top=state.discard[state.discard.length-1];
   if(!top) return true;
   if(state.unoMode){
@@ -848,8 +852,8 @@ function applySpecial(card,player){
   }
 
   if(card.rank==='D2'){
-    logMsg(`Draw 2 played! ${nextPlayerName} must draw 2.`);
-    state.pendingDraw = 2; 
+    logMsg(`Draw 2 played! ${nextPlayerName} must draw ${state.pendingDraw + 2}.`);
+    state.pendingDraw += 2; // FIX: Accumulate penalty
     if(state.reverseSkip) {
       logMsg(`Draw 2 also skips the next player (Reverse/D2 Skip setting is ON).`);
       skipNext = true;
@@ -865,65 +869,44 @@ function applySpecial(card,player){
 
 // --- Player Turn Management ---
 
-function resolveDrawPenalty(player, nextPlayerFunction) {
+// NEW FUNCTION to handle *only* drawing the penalty and ending the turn.
+function resolvePenaltyDraw(player) {
   const drawAmount = state.pendingDraw;
   state.pendingDraw = 0; 
-  
-  // Flag to check if the action card dictates a skip (toggle is ON)
-  const wasSkip = state.reverseSkip; 
-
   const playerName = (player === 'p1') ? 'Player 1' : (state.gameMode === 'pvc' ? 'CPU' : 'Player 2');
   logMsg(`Penalty: ${playerName} must draw ${drawAmount} cards.`);
-  updateStatus(`${playerName} drawing penalty cards...`);
+  updateStatus(`${playerName} drawing ${drawAmount} penalty cards...`);
 
-  // FIX 1: Explicitly lock the UI during the penalty draw sequence for human players
-  if (player === 'p1' || state.gameMode === 'pvp') { 
-      state.uiLocked = true; 
-  }
+  // Lock UI for all players during this
+  state.uiLocked = true; 
   
-  // 1. Draw Cards
   for (let i = 0; i < drawAmount; i++) {
     drawCardForPlayer(player);
   }
-
-  // 2. Rerender immediately to show new card count/hand (still locked)
+  
   renderAll(); 
   if (player === 'p1' || state.gameMode === 'pvp') { 
-     renderHand(el.playerHand, state.players[player], true);
+    renderHand(el.playerHand, state.players[player], true);
   }
-
-  // 3. Turn Continuation Logic
+  
+  // After drawing, their turn is *over* (standard UNO rule).
   setTimeout(() => {
-    if (wasSkip) {
-      // Standard UNO D2 behavior (draw and skip)
-      logMsg(`${playerName} skipped.`);
-      updateStatus(`${playerName} was skipped. Passing turn...`);
-      nextPlayerFunction(); // Pass to the player *after* the current player
-    } else {
-      // User's custom D2 behavior (draw but play)
-      logMsg(`${playerName} finishes drawing penalty cards and starts their turn.`);
-      updateStatus(`${playerName}'s turn.`);
-      
-      if (player === 'p2' && state.gameMode === 'pvc') {
-        // CPU continues its turn
-        cpuTurn(); 
-      } else {
-        // Human player (P1 or P2 in PVP) now gets to play.
-        state.uiLocked = false; 
-        renderAll();
-        // FIX 2: Re-render P1/P2's hand here to ensure all card click handlers are active after the unlock
-        renderHand(el.playerHand, state.players[player], true); 
-      }
+    logMsg(`${playerName} drew ${drawAmount} cards. Turn ends.`);
+    updateStatus(`Turn passes.`);
+    
+    // Pass to the *next* player
+    if (player === 'p1') {
+      if (state.gameMode === 'pvc') passTurnToCPU();
+      else passTurnToP2();
+    } else { // player === 'p2'
+      if (state.gameMode === 'pvc') passTurnToP1_Human();
+      else passTurnToP1();
     }
   }, state.cpuPlayDelay / 2);
 }
 
 function passTurnToP1_Human() {
   state.currentPlayer = 'p1';
-  if (state.pendingDraw > 0) {
-    resolveDrawPenalty('p1', passTurnToCPU); 
-    return;
-  }
   el.opponentInfo.textContent = "waiting";
   updateStatus("Your turn.");
   state.uiLocked = false;
@@ -934,10 +917,6 @@ function passTurnToP1_Human() {
 function passTurnToCPU() {
   state.currentPlayer = 'p2';
   state.uiLocked = true;
-  if (state.pendingDraw > 0) {
-    resolveDrawPenalty('p2', passTurnToP1_Human); 
-    return;
-  }
   el.opponentInfo.textContent = "thinking...";
   updateStatus("CPU thinking...");
   renderAll();
@@ -947,11 +926,6 @@ function passTurnToCPU() {
 function showP1Hand(isFirstTurn = false) {
   el.handOverModal.classList.remove('visible');
   state.currentPlayer = 'p1';
-  
-  if (state.pendingDraw > 0) {
-    resolveDrawPenalty('p1', passTurnToP2); 
-    return;
-  }
   
   updateStatus("Player 1's turn.");
   state.uiLocked = false;
@@ -963,11 +937,6 @@ function showP1Hand(isFirstTurn = false) {
 function showP2Hand(isFirstTurn = false) {
   el.handOverModal.classList.remove('visible');
   state.currentPlayer = 'p2';
-  
-  if (state.pendingDraw > 0) {
-    resolveDrawPenalty('p2', passTurnToP1); 
-    return;
-  }
   
   updateStatus("Player 2's turn.");
   state.uiLocked = false;
@@ -1001,6 +970,23 @@ function cpuTurn(){
   logMsg('--- CPU TURN START ---'); 
   el.opponentInfo.textContent = "thinking...";
   const hand=state.players.p2;
+
+  // FIX: Check for pending draw (stacking logic)
+  if (state.pendingDraw > 0 && state.unoMode) {
+    logMsg(`CPU has a pending draw of ${state.pendingDraw}.`);
+    const d2 = hand.find(c => c.rank === 'D2');
+    if (d2) {
+        logMsg('CPU will stack a D2.');
+        const d2Index = hand.indexOf(d2);
+        cpuPlayCard(d2Index); // This will play, add to the penalty, and pass turn.
+        return;
+    } else {
+        logMsg('CPU has no D2, must draw penalty.');
+        resolvePenaltyDraw('p2'); // This will force draw and pass turn.
+        return;
+    }
+  }
+  // END FIX
   
   let cardToPlay = null;
   let cardIndex = -1;
@@ -1126,6 +1112,12 @@ function drawCardForPlayer(player) {
 }
 
 function playerDraw() {
+  if (state.pendingDraw > 0 && state.unoMode) {
+    // Player is accepting the penalty.
+    resolvePenaltyDraw(state.currentPlayer); // This new function will handle drawing and passing turn.
+    return 'resolved_penalty'; 
+  }
+
   const drawnCard = drawCardForPlayer(state.currentPlayer);
 
   if (!drawnCard) {
@@ -1153,7 +1145,14 @@ function attemptPlayCard(player,idx){
   
   const hand=state.players[player];const card=hand[idx];
   
-  if(!legalPlay(card)){updateStatus("Illegal play");return;}
+  if(!legalPlay(card)){
+    if (state.pendingDraw > 0) {
+      updateStatus(`You have a ${state.pendingDraw}-card penalty. You must play a 'D2' or Draw.`);
+    } else {
+      updateStatus("Illegal play");
+    }
+    return;
+  }
   
   hand.splice(idx,1);state.discard.push(card);
   const playerName = (player === 'p1') ? 'Player 1' : (state.gameMode === 'pvc' ? 'CPU' : 'Player 2');
@@ -1359,16 +1358,43 @@ el.drawBtn.addEventListener('click',()=>{
   if(state.currentPlayer!=='p1' && state.gameMode === 'pvc'){updateStatus("Not your turn");return;}
   if(state.uiLocked) return;
 
+  // FIX: This check must come *after* the pending draw check
+  // if(state.mustPlayIfAble && state.pendingDraw === 0) { // <-- Modified check
+  //   const hand = state.players[state.currentPlayer];
+  //   const hasPlayableCard = hand.some(c => legalPlay(c));
+  //   if(hasPlayableCard) {
+  //     updateStatus("'Must Play If Able' is ON. You have a playable card and cannot draw.");
+  //     return;
+  //   }
+  // }
+  
+  // Refactored logic
   if(state.mustPlayIfAble) {
-    const hand = state.players[state.currentPlayer];
-    const hasPlayableCard = hand.some(c => legalPlay(c));
-    if(hasPlayableCard) {
-      updateStatus("'Must Play If Able' is ON. You have a playable card and cannot draw.");
-      return;
+    // Check if there's a pending draw. If so, draw is ONLY allowed if you DON'T have a D2.
+    if(state.pendingDraw > 0) {
+      const hasD2 = state.players[state.currentPlayer].some(c => c.rank === 'D2');
+      if(hasD2) {
+        updateStatus("'Must Play If Able' is ON. You must play your D2 to stack.");
+        return;
+      }
+      // If no D2, clicking draw is correct, so we let it proceed to playerDraw().
+    } else {
+      // No pending draw, normal must-play logic
+      const hasPlayableCard = state.players[state.currentPlayer].some(c => legalPlay(c));
+      if(hasPlayableCard) {
+        updateStatus("'Must Play If Able' is ON. You have a playable card and cannot draw.");
+        return;
+      }
     }
   }
   
   const drawResult = playerDraw(); 
+  
+  if (drawResult === 'resolved_penalty') {
+      // resolvePenaltyDraw() handles all logic and turn passing.
+      return;
+  }
+  
   const handToRender = state.players[state.currentPlayer];
   
   // Re-render immediately after drawing to show the new card
@@ -1398,6 +1424,12 @@ el.passBtn.addEventListener('click',()=>{
   if(state.uiLocked) return;
   if(!state.allowPass){updateStatus("Passing is disabled by game settings.");return;}
   
+  // FIX: Cannot pass if there is a pending draw
+  if(state.pendingDraw > 0) {
+    updateStatus(`Cannot pass. You must play a 'D2' or Draw to accept the ${state.pendingDraw}-card penalty.`);
+    return;
+  }
+
   const hand = state.players[state.currentPlayer];
   const playable = hand.some(c => legalPlay(c));
   if(playable){
@@ -1418,6 +1450,17 @@ el.passBtn.addEventListener('click',()=>{
 
 el.hintBtn.addEventListener('click',()=>{
   const hand = state.players[state.currentPlayer];
+  
+  if(state.pendingDraw > 0) {
+    const d2 = hand.find(c => c.rank === 'D2');
+    if(d2) {
+      updateStatus(`Hint: play ${cardLabel(d2)} to stack the penalty.`);
+    } else {
+      updateStatus(`Hint: no 'D2' card. You must Draw to accept the penalty.`);
+    }
+    return;
+  }
+
   const h=hand.find(c=>legalPlay(c));
   updateStatus(h?`Hint: play ${cardLabel(h)}`:'Hint: no playable cards. Draw or Pass.');
 });
