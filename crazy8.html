@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♠</text></svg>">
-<title>Crazy Eights / UNO Hybrid — Single Page</title>
+<title>Crazy Eights / UNO / War Hybrid</title>
 <style>
   :root{
     --bg:#0b1220;
@@ -178,6 +178,82 @@
     align-items:center
   }
   
+  /* War Specific Layout */
+  .war-battle-zone {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      min-height: 120px;
+  }
+  .war-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+  }
+  .war-pot-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background: rgba(0,0,0,0.2);
+    padding: 8px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 300px;
+    height: 100px; /* FIXED HEIGHT TO PRE-EXPAND */
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .war-pot-visual {
+    display: flex; 
+    flex-wrap: wrap;
+    align-items: center; 
+    justify-content: center;
+    margin-top: 4px;
+    gap: 4px;
+    width: 100%;
+  }
+  .war-mini-card {
+    width: 28px; 
+    height: 38px; 
+    background: #fff; 
+    border-radius: 3px; 
+    color: #111;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .war-mini-card[data-suit="♥"], .war-mini-card[data-suit="♦"] { color: var(--red); }
+  
+  .war-pot-label {
+      font-weight: 800;
+      color: var(--accent);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      position: sticky;
+      top: 0;
+  }
+  .war-last-result {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    text-align: center;
+    min-height: 20px;
+    margin-top: 10px;
+    padding: 4px 8px;
+    background: rgba(255, 190, 75, 0.1);
+    border-radius: 6px;
+  }
+  
   .info{font-size:13px;color:var(--muted)}
   
   /* NEW: Status and Log Toggles */
@@ -293,6 +369,22 @@
       margin-top: 0;
     }
     
+    /* Mobile War Layout Adjustments */
+    #warStack {
+        width: 100%;
+        gap: 10px;
+    }
+    .war-battle-zone {
+        gap: 15px;
+        margin-bottom: 5px;
+    }
+    /* Scale cards down slightly in battle zone on mobile */
+    .war-battle-zone .card {
+        width: 55px; height: 80px;
+    }
+    .war-battle-zone .card .rank { font-size: 16px; }
+    .war-battle-zone .card .suit { font-size: 22px; }
+    
     #opponentPanel {
       padding: 8px; 
     }
@@ -324,18 +416,25 @@
       display: none; /* Hide scrollbar for Chrome, Safari, etc. */
     }
     
+    /* Mobile War Deck Button */
+    #playerHand .card.war-deck-btn {
+        width: 80px !important;
+        height: 110px !important;
+        margin-top: 10px;
+    }
+    
     /* Force smallest card size on mobile to save vertical space */
-    #playerHand .card { 
+    #playerHand .card:not(.war-deck-btn) { 
       width: 40px; 
       height: 58px; 
       padding: 2px; 
       border-radius: 3px; 
     }
-    #playerHand .card .suit { font-size: 14px; }
-    #playerHand .card .rank { font-size: 12px; }
-    #playerHand .card.uno .rank { font-size: 12px; }
-    #playerHand .card .corner-tl, #playerHand .card .corner-br { font-size: 12px; top: 2px; left: 2px; }
-    #playerHand .card .corner-br { bottom: 2px; right: 2px; }
+    #playerHand .card:not(.war-deck-btn) .suit { font-size: 14px; }
+    #playerHand .card:not(.war-deck-btn) .rank { font-size: 12px; }
+    #playerHand .card:not(.war-deck-btn).uno .rank { font-size: 12px; }
+    #playerHand .card:not(.war-deck-btn) .corner-tl, #playerHand .card:not(.war-deck-btn) .corner-br { font-size: 12px; top: 2px; left: 2px; }
+    #playerHand .card:not(.war-deck-btn) .corner-br { bottom: 2px; right: 2px; }
 
     /* Mobile Status/Log Toggles */
     .mobile-toggle { 
@@ -357,6 +456,43 @@
     .log-toggle { display: none; }
 
     #logContent:not(.collapsed) .log-full { display: block; }
+
+    /* --- WAR MODE SPECIFIC MOBILE OVERRIDES --- */
+    .center-row.war-mode {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    /* The Hand Panel (Left) */
+    .center-row.war-mode .panel.area {
+        order: 1; /* First */
+        flex: 0 0 auto; /* Don't grow */
+        width: auto;
+        background: none; 
+        box-shadow: none; 
+        padding: 0;
+        border: none;
+        min-height: 0;
+    }
+    
+    /* The Battle Field (Right) */
+    .center-row.war-mode .center-stack {
+        order: 2;
+        flex: 1; /* Take remaining space */
+    }
+    
+    /* Fix the scrolling hand issue */
+    .center-row.war-mode #playerHand {
+        overflow: visible;
+        padding: 5px;
+        justify-content: center;
+    }
+    
+    /* Adjust War Deck Btn Margin in this specific layout */
+    .center-row.war-mode #playerHand .card.war-deck-btn {
+        margin-top: 0;
+    }
   }
 </style>
 </head>
@@ -364,12 +500,12 @@
 
 <div class="app">
 <header>
-  <h1>Crazy Eights / UNO Hybrid</h1>
+  <h1>Crazy Eights / UNO / War Hybrid</h1>
   <div class="controls">
     <div class="control-group">
       <button id="newGameBtn">New Game</button>
       <button id="hintBtn" class="secondary">Hint</button>
-      <button id="cpuSpeedBtn" class="secondary">CPU Speed: Normal</button>
+      <button id="cpuSpeedBtn" class="secondary">CPU: Normal</button>
     </div>
     <div class="control-group">
       <button id="rulesBtn" class="secondary">Rules</button>
@@ -420,7 +556,8 @@
 
   <div class="center-row">
     <div class="panel center-stack">
-      <div class="stack-row">
+      
+      <div id="standardStack" class="stack-row">
         <div>
           <div class="info">Draw pile</div>
           <div id="drawPile" class="card back small">DECK</div>
@@ -430,6 +567,28 @@
           <div id="discardTop" class="card"></div>
         </div>
       </div>
+      
+      <div id="warStack" class="stack-row" style="display: none; flex-direction: column; align-items: center; width: 100%;">
+        <div class="war-pot-container">
+            <div class="war-pot-label" id="warPotLabel">Pot: 0 Cards</div>
+            <div class="war-pot-visual" id="warPotVisual"></div>
+        </div>
+        
+        <div class="war-battle-zone">
+            <div class="war-slot">
+                <div class="info">You</div>
+                <div id="warCardP1" class="card"></div>
+            </div>
+            <div style="font-weight:800; color:var(--muted); font-size: 20px;">VS</div>
+            <div class="war-slot">
+                <div class="info">Opponent</div>
+                <div id="warCardP2" class="card"></div>
+            </div>
+        </div>
+        
+        <div class="war-last-result" id="warLastResult"></div>
+      </div>
+      
       <div style="display:flex;gap:8px;margin-top:12px">
         <button id="drawBtn" class="secondary">Draw</button>
         <button id="passBtn" class="secondary" style="display: none;">Pass/Skip</button>
@@ -450,24 +609,35 @@
   <div class="modal-panel">
     <h2>Game Settings</h2>
     <div class="settings-group" id="settingsPanel">
-      <label class="secondary">Game Mode
+      <label class="secondary">Game Type
+        <select id="gameVariantSelect" class="secondary">
+          <option value="c8" selected>Crazy Eights</option>
+          <option value="uno">UNO</option>
+          <option value="war">War</option>
+        </select>
+      </label>
+      
+      <label class="secondary" id="gameModeContainer">Game Mode
         <select id="gameModeSelect" class="secondary">
           <option value="pvc">Player vs. CPU</option>
           <option value="pvp">Player vs. Player</option>
         </select>
       </label>
-      <label class="secondary">Initial Cards
-        <select id="initialHandSizeSelect" class="secondary">
-          <option value="7">7 Cards</option>
-          <option value="8" selected>8 Cards (Classic C8)</option>
-        </select>
-      </label>
-      <label class="secondary">UNO Mode <input type="checkbox" id="unoModeChk"></label>
-      <label class="secondary" id="reverseSkipLabel" style="display: none;">Reverse Card Skips Opponent <input type="checkbox" id="reverseSkipChk"></label>
-      <label class="secondary" id="stackWD4Label" style="display: none;">Allow Stacking WD4 on D2 <input type="checkbox" id="stackWD4Chk"></label>
-      <label class="secondary">Must Play If Able <input type="checkbox" id="mustPlayIfAbleChk"></label>
-      <label class="secondary">Draw Until Playable <input type="checkbox" id="drawUntilPlayableChk"></label>
-      <label class="secondary">Allow Pass <input type="checkbox" id="allowPassChk"></label>
+
+      <div id="c8UnoSettings">
+          <label class="secondary">Initial Cards
+            <select id="initialHandSizeSelect" class="secondary">
+              <option value="7">7 Cards</option>
+              <option value="8" selected>8 Cards (Classic C8)</option>
+            </select>
+          </label>
+          <label class="secondary" id="reverseSkipLabel" style="display: none;">Reverse Card Skips Opponent <input type="checkbox" id="reverseSkipChk"></label>
+          <label class="secondary" id="stackWD4Label" style="display: none;">Allow Stacking WD4 on D2 <input type="checkbox" id="stackWD4Chk"></label>
+          <label class="secondary">Must Play If Able <input type="checkbox" id="mustPlayIfAbleChk"></label>
+          <label class="secondary">Draw Until Playable <input type="checkbox" id="drawUntilPlayableChk"></label>
+          <label class="secondary">Allow Pass <input type="checkbox" id="allowPassChk"></label>
+      </div>
+      
       <label class="secondary">First Turn Rule
         <select id="firstTurnRuleSelect" class="secondary">
           <option value="p1">Player 1 Goes First</option>
@@ -497,28 +667,26 @@
           <li><b>Objective:</b> Be the first player to empty your hand.</li>
           <li><b>Play:</b> Match the top card of the discard pile by either <b>Rank</b> or <b>Suit</b>.</li>
           <li><b>Eights (8):</b> Eights are wild. You can play an 8 on any card. After playing, you must choose a new suit for the next player to follow.</li>
-          <li><b>Drawing:</b> If you cannot play a card, you must draw from the deck. In this version, drawing ends your turn (unless "Draw Until Playable" is on).</li>
+          <li><b>Drawing:</b> If you cannot play a card, you must draw from the deck.</li>
         </ul>
       </div>
       <div id="rulesUNO" style="display: none;">
-        <h3>UNO Mode</h3>
+        <h3>UNO</h3>
         <ul>
           <li><b>Objective:</b> Be the first player to empty your hand.</li>
           <li><b>Play:</b> Match the top card of the discard pile by either <b>Number</b>, <b>Color</b>, or <b>Symbol</b>.</li>
-          <li><b>Wild:</b> A "WILD" card is wild. You can play it on any card. After playing, you must choose a new color for the next player to follow.</li>
-          <li><b>Action Cards (1v1 Rules):</b>
-            <ul>
-              <li><b>SKIP:</b> The other player is skipped. You play again.</li>
-              <li><b>REV (Reverse):</b> If "Reverse Card Skips Opponent" is ON, the other player is skipped. Otherwise, the turn passes normally.</li>
-              <li><b>D2 / WD4 (Attacks):</b> Play a Draw 2 or Wild Draw 4 to penalize the opponent. The opponent must either <b>STACK</b> or draw penalty cards.
-                <ul>
-                    <li><b>D2 on D2:</b> Allowed.</li>
-                    <li><b>WD4 on WD4:</b> Not allowed (Hard rule).</li>
-                    <li><b>WD4 on D2:</b> Only allowed if enabled in Settings.</li>
-                </ul>
-              </li>
-            </ul>
-          </li>
+          <li><b>Wild:</b> A "WILD" card is wild. You can play it on any card. After playing, you must choose a new color.</li>
+          <li><b>Action Cards:</b> Standard UNO actions (Skip, Reverse, D2, WD4) apply.</li>
+        </ul>
+      </div>
+      <div id="rulesWar" style="display: none;">
+        <h3>War</h3>
+        <ul>
+            <li><b>Objective:</b> Collect all 52 cards in the deck.</li>
+            <li><b>Play:</b> Click your deck to flip the top card. CPU flips too.</li>
+            <li><b>Battle:</b> Higher rank wins both cards (A &gt; K &gt; Q ... &gt; 2).</li>
+            <li><b>WAR (Tie):</b> If ranks are tied, it is WAR! You must click your deck again to add 3 cards <b>face up</b> to the pot, then flip one more card to battle. Winner takes all.</li>
+            <li><b>Win:</b> The game ends when one player runs out of cards.</li>
         </ul>
       </div>
     </div>
@@ -583,6 +751,7 @@ const SUITS=['♠','♥','♦','♣'];
 const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const UNO_COLORS=['R','G','B','Y'];
 const UNO_SPECIAL=['SKIP','REV','D2','WILD','WD4'];
+const SPEEDS = [ {label: 'Normal', delay: 700}, {label: 'Slow', delay: 2500}, {label: 'Instant', delay: 0} ];
 
 // State
 let state={
@@ -592,9 +761,11 @@ let state={
   currentSuit:null, 
   currentColor:null,
   cpuPlayDelay: 700,
+  speedIndex: 0,
   initialHandSize: 8,
   gameMode: 'pvc',
-  unoMode:false, 
+  gameVariant: 'c8', // 'c8', 'uno', 'war'
+  unoMode:false, // legacy flag kept for logic compatibility
   mustPlayIfAble:false, 
   drawUntilPlayable:false, 
   allowPass:false,
@@ -605,7 +776,11 @@ let state={
   uiLocked: false,
   isPickingSuit: false,
   pendingDraw: 0,
-  penaltyAttemptCount: 0
+  penaltyAttemptCount: 0,
+  // War Specific
+  warPot: [],
+  warActive: {p1: null, p2: null},
+  warState: 'idle', // 'idle', 'tie_pending_resolve', 'resolved'
 };
 
 const el={
@@ -616,7 +791,6 @@ const el={
   passBtn:document.getElementById('passBtn'),
   newGameBtn:document.getElementById('newGameBtn'),
   opponentCardCount:document.getElementById('opponentCardCount'),
-  playerCount:document.getElementById('playerCount'),
   statusText:document.getElementById('statusText'),
   logPreview:document.getElementById('logPreview'),
   turnLabel:document.getElementById('turnLabel'),
@@ -637,6 +811,7 @@ const el={
   closeRulesBtn: document.getElementById('closeRulesBtn'),
   rulesC8: document.getElementById('rulesC8'),
   rulesUNO: document.getElementById('rulesUNO'),
+  rulesWar: document.getElementById('rulesWar'),
   logModal: document.getElementById('logModal'),
   fullLog: document.getElementById('fullLog'),
   closeLogBtn: document.getElementById('closeLogBtn'),
@@ -657,6 +832,9 @@ const el={
   handOverMessage: document.getElementById('handOverMessage'),
   handOverBtn: document.getElementById('handOverBtn'),
   gameModeSelect: document.getElementById('gameModeSelect'),
+  gameVariantSelect: document.getElementById('gameVariantSelect'),
+  gameModeContainer: document.getElementById('gameModeContainer'),
+  c8UnoSettings: document.getElementById('c8UnoSettings'),
   initialHandSizeSelect: document.getElementById('initialHandSizeSelect'),
   unoModeChk:document.getElementById('unoModeChk'),
   reverseSkipLabel: document.getElementById('reverseSkipLabel'),
@@ -667,6 +845,15 @@ const el={
   drawUntilPlayableChk:document.getElementById('drawUntilPlayableChk'),
   allowPassChk:document.getElementById('allowPassChk'),
   firstTurnRuleSelect: document.getElementById('firstTurnRuleSelect'),
+  // War Elements
+  standardStack: document.getElementById('standardStack'),
+  warStack: document.getElementById('warStack'),
+  warCardP1: document.getElementById('warCardP1'),
+  warCardP2: document.getElementById('warCardP2'),
+  warPotLabel: document.getElementById('warPotLabel'),
+  warPotVisual: document.getElementById('warPotVisual'),
+  warLastResult: document.getElementById('warLastResult'),
+  
   // Mobile toggles elements
   statusToggle: document.getElementById('statusToggle'),
   logToggle: document.getElementById('logToggle'),
@@ -695,8 +882,17 @@ function logMsg(txt){
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function cardLabel(c){if (!c) return '??'; return c.rank==='WD4' ? 'Wild Draw 4' : c.rank+(c.suit||c.color||'');}
 
+// Rank value helper for War
+function getWarValue(rank) {
+    if (rank === 'A') return 14;
+    if (rank === 'K') return 13;
+    if (rank === 'Q') return 12;
+    if (rank === 'J') return 11;
+    return parseInt(rank);
+}
+
 function makeDeck(){
-  if(state.unoMode){
+  if(state.gameVariant === 'uno'){
     let deck=[];
     for(const color of UNO_COLORS){
       deck.push({rank:'0',color:color,id:`${color}0`});
@@ -704,72 +900,137 @@ function makeDeck(){
       for(const s of ['SKIP','REV','D2']) deck.push({rank:s,color:color,id:`${color}${s}1`}),deck.push({rank:s,color:color,id:`${color}${s}2`}); 
     }
     for(let i=0;i<4;i++) deck.push({rank:'WILD',color:null,id:`W${i}`});
-    // ADD WD4
     for(let i=0;i<4;i++) deck.push({rank:'WD4',color:null,id:`WD4${i}`});
     return shuffle(deck);
   } else {
+    // Standard Deck (C8 and War)
     let deck=[]; for(const s of SUITS) for(const r of RANKS) deck.push({rank:r,suit:s,id:`${r}${s}`}); return shuffle(deck);
   }
 }
 
 function renderAll(){
+  const isWar = state.gameVariant === 'war';
   let p1 = state.players.p1;
   let p2 = state.players.p2;
   let p1sTurn = state.currentPlayer === 'p1';
-  let pvp = state.gameMode === 'pvp';
+  
+  // NEW: Toggle war-mode class on center-row for styling hooks
+  const centerRow = document.querySelector('.center-row');
+  
+  if(isWar) {
+      // Toggle class for CSS
+      centerRow.classList.add('war-mode');
 
-  const p1Count = p1.length;
-  const p2Count = p2.length;
-  
-  if (el.playerCount) {
-    el.playerCount.textContent = p1sTurn ? p1Count : p2Count;
-  }
-  
-  if (pvp) {
-    if (p1sTurn) {
-      el.opponentCardCount.textContent = p2Count;
-      el.turnLabel.textContent = "Turn: Player 1";
-      if (el.playerHandLabel) el.playerHandLabel.textContent = "Player 1's Hand";
-      el.opponentLabel.textContent = "Opponent: Player 2";
-      el.opponentHandLabel.textContent = "P2 Hand";
-    } else {
-      el.opponentCardCount.textContent = p1Count;
-      el.turnLabel.textContent = "Turn: Player 2";
-      if (el.playerHandLabel) el.playerHandLabel.textContent = "Player 2's Hand";
-      el.opponentLabel.textContent = "Opponent: Player 1";
-      el.opponentHandLabel.textContent = "P1 Hand";
-    }
+      // WAR UI Update
+      el.standardStack.style.display = 'none';
+      el.warStack.style.display = 'flex';
+      el.playerHand.innerHTML = ''; // Clear individual cards
+      
+      // Render P1 "Deck" as a big clickable button in hand area
+      const deckBtn = document.createElement('div');
+      deckBtn.className = 'card back war-deck-btn';
+      deckBtn.style.width = '100px';
+      deckBtn.style.height = '140px';
+      deckBtn.style.margin = '0 auto';
+      deckBtn.style.cursor = 'pointer';
+      deckBtn.innerHTML = `<div>YOU<br>${p1.length}</div>`;
+      
+      // Only allow click if it's P1's turn (manual trigger) and UI isn't strictly locked (though War logic handles its own locking)
+      deckBtn.onclick = () => { if(!state.uiLocked) playWarTurn(); };
+      
+      if(state.uiLocked) deckBtn.style.opacity = 0.6;
+      el.playerHand.appendChild(deckBtn);
+      
+      // Update Center Arena
+      renderCardToDiv(el.warCardP1, state.warActive.p1);
+      renderCardToDiv(el.warCardP2, state.warActive.p2);
+      
+      el.warPotLabel.textContent = `Pot: ${state.warPot.length} Cards`;
+      
+      // Visualize Pot
+      el.warPotVisual.innerHTML = '';
+      state.warPot.forEach(c => {
+        const mc = document.createElement('div');
+        mc.className = 'war-mini-card';
+        mc.innerHTML = `<div>${c.rank}</div><div>${c.suit}</div>`;
+        if(c.suit) mc.dataset.suit = c.suit;
+        el.warPotVisual.appendChild(mc);
+      });
+      
+      el.opponentCardCount.textContent = p2.length;
+      el.turnLabel.textContent = "Turn: You (Click Deck)";
+      el.opponentHandLabel.textContent = "P2 Deck";
+      el.currentSuit.textContent = "Mode: War";
+      
+      // Hide standard controls
+      el.drawBtn.style.display = 'none';
+      el.passBtn.style.display = 'none';
+      el.shuffleBtn.style.display = 'none';
+      el.hintBtn.style.display = 'none'; // Hide hint in War
+
   } else {
-    if (p1sTurn) {
-      el.opponentCardCount.textContent = p2Count;
-      el.turnLabel.textContent = "Turn: You";
-      if (el.playerHandLabel) el.playerHandLabel.textContent = "Your Hand";
-      el.opponentLabel.textContent = "CPU";
-      el.opponentHandLabel.textContent = "CPU Hand";
-    } else {
-      el.opponentCardCount.textContent = p2Count; 
-      el.turnLabel.textContent = "Turn: CPU";
-      if (el.playerHandLabel) el.playerHandLabel.textContent = "Your Hand";
-      el.opponentLabel.textContent = "CPU";
-      el.opponentHandLabel.textContent = "CPU Hand";
-    }
-  }
+      // Remove class
+      centerRow.classList.remove('war-mode');
 
-  renderDiscard();
-  el.drawPile.textContent = state.deck.length > 0 ? state.deck.length : '0';
-  const label = state.unoMode ? "Color" : "Suit";
-  const activeSuitColor = state.currentSuit || state.currentColor || '—';
-  el.currentSuit.textContent = `${label}: ${activeSuitColor}`;
+      // Standard C8/UNO UI
+      el.standardStack.style.display = 'flex';
+      el.warStack.style.display = 'none';
+      el.hintBtn.style.display = 'inline-block';
+      
+      if (el.playerCount) {
+        el.playerCount.textContent = p1sTurn ? p1.length : p2.length;
+      }
+      
+      if (p1sTurn) {
+          el.opponentCardCount.textContent = p2.length;
+          el.turnLabel.textContent = "Turn: You";
+      } else {
+          el.opponentCardCount.textContent = p2.length; 
+          el.turnLabel.textContent = "Turn: CPU";
+      }
+
+      renderDiscard();
+      el.drawPile.textContent = state.deck.length > 0 ? state.deck.length : '0';
+      const label = state.gameVariant === 'uno' ? "Color" : "Suit";
+      const activeSuitColor = state.currentSuit || state.currentColor || '—';
+      el.currentSuit.textContent = `${label}: ${activeSuitColor}`;
+      el.currentSuitPreview.textContent = activeSuitColor;
+      
+      el.passBtn.style.display = state.allowPass ? 'inline-block' : 'none';
+      el.drawBtn.style.display = 'inline-block';
+      el.shuffleBtn.style.display = 'inline-block';
+  }
   
-  el.currentSuitPreview.textContent = activeSuitColor;
-  
-  el.passBtn.style.display = state.allowPass ? 'inline-block' : 'none';
   el.cpuSpeedBtn.style.display = state.gameMode === 'pvc' ? 'inline-block' : 'none';
 }
 
+function renderCardToDiv(div, card) {
+    div.className = 'card';
+    div.innerHTML = '';
+    div.removeAttribute('data-suit');
+    div.removeAttribute('data-color');
+    div.classList.remove('back', 'uno', 'wild', 'small');
+    
+    if (!card) {
+        div.style.border = '2px dashed var(--muted)';
+        div.style.background = 'transparent';
+        div.style.boxShadow = 'none';
+        return;
+    }
+    
+    div.style.border = '';
+    div.style.background = '';
+    div.style.boxShadow = '';
+    
+    div.innerHTML = `<div class="rank">${card.rank}</div><div class="suit">${card.suit}</div>`;
+    if(card.suit) div.dataset.suit = card.suit;
+}
+
+
 function renderHand(container,cards,isHuman){
+  if(state.gameVariant === 'war') return; // War handles hand differently
+
   container.innerHTML='';
-  
   const isHandLocked = state.uiLocked && !state.isPickingSuit; 
   container.style.opacity = (isHuman && isHandLocked) ? 0.6 : 1;
   container.style.pointerEvents = (isHuman && isHandLocked) ? 'none' : 'auto';
@@ -788,10 +1049,9 @@ function renderHand(container,cards,isHuman){
     d.className = 'card';
     d.title=cardLabel(c);
     
-    if(state.unoMode) {
+    if(state.gameVariant === 'uno') {
       d.classList.add('uno');
       
-      // Display +4/Wild in corners to be slick
       if (c.rank === 'WILD' || c.rank === 'WD4') {
           d.classList.add('wild');
           const rankDisplay = c.rank === 'WD4' ? '+4' : 'W';
@@ -821,7 +1081,7 @@ function renderDiscard(){
     el.discardTop.className = 'card';
     el.discardTop.title = cardLabel(top);
     
-    if(state.unoMode) {
+    if(state.gameVariant === 'uno') {
       el.discardTop.classList.add('uno');
       
       if (top.rank === 'WILD' || top.rank === 'WD4') {
@@ -848,8 +1108,8 @@ function renderDiscard(){
       if (activeSuit) {
         const overlay = document.createElement('div');
         overlay.className = 'wild-suit-indicator';
-        overlay.textContent = state.unoMode ? activeSuit : activeSuit;
-        if (state.unoMode) {
+        overlay.textContent = state.gameVariant === 'uno' ? activeSuit : activeSuit;
+        if (state.gameVariant === 'uno') {
           overlay.dataset.color = activeSuit;
         } else {
           overlay.dataset.suit = activeSuit;
@@ -864,27 +1124,124 @@ function renderDiscard(){
   }
 }
 
+// --- WAR LOGIC START ---
+function playWarTurn() {
+    if(state.gameVariant !== 'war') return;
+    
+    // Logic path depends on State
+    if (state.warState === 'tie_pending_resolve') {
+        resolveWarTie();
+        return;
+    }
+
+    // Normal Battle: Both flip top card
+    const c1 = state.players.p1.shift();
+    const c2 = state.players.p2.shift();
+    
+    // Immediate game over check (rare edge case here, usually caught after resolution)
+    if (!c1 || !c2) {
+        if(!c1 && c2) { state.players.p2.push(c2); checkWin(); return; }
+        if(c1 && !c2) { state.players.p1.push(c1); checkWin(); return; }
+        checkWin(); return;
+    }
+
+    state.warActive = {p1: c1, p2: c2};
+    state.warPot.push(c1, c2);
+    
+    renderAll();
+    
+    const v1 = getWarValue(c1.rank);
+    const v2 = getWarValue(c2.rank);
+    
+    if (v1 > v2) {
+        // Win
+        const winMsg = `You won ${state.warPot.length} cards (${c1.rank} > ${c2.rank}).`;
+        el.warLastResult.textContent = winMsg;
+        logMsg(winMsg);
+        state.uiLocked = true; // Pause for effect
+        
+        setTimeout(() => {
+             state.players.p1.push(...state.warPot);
+             resetWarRound();
+        }, state.cpuPlayDelay || 500);
+        
+    } else if (v2 > v1) {
+        // Loss
+        const loseMsg = `CPU won ${state.warPot.length} cards (${c2.rank} > ${c1.rank}).`;
+        el.warLastResult.textContent = loseMsg;
+        logMsg(loseMsg);
+        state.uiLocked = true; 
+        
+        setTimeout(() => {
+             state.players.p2.push(...state.warPot);
+             resetWarRound();
+        }, state.cpuPlayDelay || 500);
+        
+    } else {
+        // Tie
+        const tieMsg = `TIE (${c1.rank} vs ${c2.rank})! Click deck to Draw 3 & Battle.`;
+        el.warLastResult.textContent = "WAR! (Tie)";
+        updateStatus(tieMsg);
+        logMsg("WAR triggered! Waiting for player to click deck...");
+        state.warState = 'tie_pending_resolve';
+        // Don't reset pot or active cards yet.
+        // UI remains unlocked so user can click again.
+    }
+}
+
+function resolveWarTie() {
+    // User clicked deck during 'tie_pending_resolve'
+    // Logic: Add up to 3 cards to pot FACE UP, then flip 1 (need at least 2 total cards to survive, ideally 4)
+    // If < 4 cards, we use all but the last one for the pot, and the last one battles.
+    
+    if(state.players.p1.length === 0) { checkWin(); return; }
+    if(state.players.p2.length === 0) { checkWin(); return; }
+
+    // Move cards to pot (exposed)
+    // Max 3, but leave 1 for the battle
+    let p1PotCount = Math.min(3, state.players.p1.length - 1);
+    let p2PotCount = Math.min(3, state.players.p2.length - 1);
+    
+    // If a player has exactly 1 card left (length=1), potCount becomes 0. They just battle.
+    if (p1PotCount < 0) p1PotCount = 0; 
+    if (p2PotCount < 0) p2PotCount = 0;
+
+    for(let i=0; i<p1PotCount; i++) state.warPot.push(state.players.p1.shift());
+    for(let i=0; i<p2PotCount; i++) state.warPot.push(state.players.p2.shift());
+    
+    logMsg(`Added exposed cards to pot. Pot size: ${state.warPot.length}`);
+    
+    state.warState = 'idle'; // Reset state so playWarTurn runs normal comparison
+    playWarTurn(); // Immediately flip next card for battle
+}
+
+function resetWarRound() {
+    state.warPot = [];
+    state.warActive = {p1: null, p2: null};
+    state.warState = 'idle';
+    state.uiLocked = false;
+    if(!checkWin()) {
+        renderAll();
+        updateStatus("Click deck to play next turn.");
+    }
+}
+// --- WAR LOGIC END ---
+
+
 function legalPlay(c){
-  // FIX: Penalty / Stacking Logic
-  if (state.pendingDraw > 0 && state.unoMode) {
+  if(state.gameVariant === 'war') return false; // No choosing cards in War
+
+  if (state.pendingDraw > 0 && state.gameVariant === 'uno') {
     const top = state.discard[state.discard.length-1];
     const topRank = top.rank;
-    
-    // 1. Can always stack D2 on D2
     if (c.rank === 'D2' && topRank === 'D2') return true;
-    
-    // 2. WD4 on D2 (Optional setting)
     if (state.stackWD4onD2 && c.rank === 'WD4' && topRank === 'D2') return true;
-    
-    // 3. WD4 on WD4? (Disabled per user request "you can't even stack a wild4 on another wild4")
-    // 4. D2 on WD4? (Standard rules usually say no +2 on +4)
-    
     return false; 
   }
   
   const top=state.discard[state.discard.length-1];
   if(!top) return true;
-  if(state.unoMode){
+  if(state.gameVariant === 'uno'){
     if(c.rank==='WILD' || c.rank==='WD4') return true;
     if(state.currentColor && c.color === state.currentColor) return true;
     if(c.rank===top.rank) return true;
@@ -895,13 +1252,13 @@ function legalPlay(c){
 }
 
 function isWildCard(c) {
-    if (state.unoMode) return c.rank === 'WILD' || c.rank === 'WD4';
+    if (state.gameVariant === 'uno') return c.rank === 'WILD' || c.rank === 'WD4';
     return c.rank === '8';
 }
 
 function applySpecial(card,player){
   let skipNext = false;
-  if(!state.unoMode) return skipNext;
+  if(state.gameVariant !== 'uno') return skipNext;
   
   const nextPlayer = (player === 'p1') ? 'p2' : 'p1';
   const nextPlayerName = (state.gameMode === 'pvc' && nextPlayer === 'p2') ? 'CPU' : `Player ${nextPlayer.substring(1)}`;
@@ -921,19 +1278,15 @@ function applySpecial(card,player){
     }
   }
 
-  // FIX: Decoupled D2 logic from Reverse/Skip settings
   if(card.rank==='D2'){
     logMsg(`Draw 2 played! ${nextPlayerName} faces penalty.`);
     state.pendingDraw += 2;
-    // D2 NEVER SKIPS automatically. It passes turn to victim to draw or stack.
     skipNext = false;
   }
   
-  // ADD: WD4 Logic
   if(card.rank==='WD4'){
     logMsg(`Wild Draw 4 played! ${nextPlayerName} faces penalty.`);
     state.pendingDraw += 4;
-    // WD4 NEVER SKIPS.
     skipNext = false;
   }
   
@@ -943,7 +1296,7 @@ function applySpecial(card,player){
 function resolvePenaltyDraw(player) {
   const drawAmount = state.pendingDraw;
   state.pendingDraw = 0; 
-  state.penaltyAttemptCount = 0; // Reset failure count on draw
+  state.penaltyAttemptCount = 0; 
   
   const playerName = (player === 'p1') ? 'Player 1' : (state.gameMode === 'pvc' ? 'CPU' : 'Player 2');
   logMsg(`Penalty: ${playerName} must draw ${drawAmount} cards.`);
@@ -967,7 +1320,7 @@ function resolvePenaltyDraw(player) {
     if (player === 'p1') {
       if (state.gameMode === 'pvc') passTurnToCPU();
       else passTurnToP2();
-    } else { // player === 'p2'
+    } else { 
       if (state.gameMode === 'pvc') passTurnToP1_Human();
       else passTurnToP1();
     }
@@ -1010,7 +1363,7 @@ function showP2Hand(isFirstTurn = false) {
   el.handOverModal.classList.remove('visible');
   state.currentPlayer = 'p2';
   state.penaltyAttemptCount = 0;
-  state.uiLocked = false; // Ensure UI is unlocked for Player 2
+  state.uiLocked = false; 
   
   updateStatus("Player 2's turn.");
   renderAll();
@@ -1035,30 +1388,27 @@ function passTurnToP2() {
 }
 
 
-// --- CPU Logic (Only for PVC mode) ---
+// --- CPU Logic ---
 
 function cpuTurn(){
   if(state.gameMode !== 'pvc' || state.currentPlayer !== 'p2') return;
+  if(state.gameVariant === 'war') return; // War is manual click driven
 
   logMsg('--- CPU TURN START ---'); 
   el.opponentInfo.textContent = "thinking...";
   const hand=state.players.p2;
 
-  // FIX: CPU Stacking Logic (Defense)
-  if (state.pendingDraw > 0 && state.unoMode) {
+  if (state.pendingDraw > 0 && state.gameVariant === 'uno') {
     logMsg(`CPU has a pending draw of ${state.pendingDraw}.`);
     const top = state.discard[state.discard.length-1];
     
-    // Can stack D2 on D2?
     let stackCardIndex = -1;
     if (top.rank === 'D2') {
         stackCardIndex = hand.findIndex(c => c.rank === 'D2');
-        // Optional: Stack WD4 on D2
         if (stackCardIndex === -1 && state.stackWD4onD2) {
            stackCardIndex = hand.findIndex(c => c.rank === 'WD4');
         }
     }
-    // NOTE: If top is WD4, cpu cannot stack (per user rules), so stackCardIndex stays -1
 
     if (stackCardIndex !== -1) {
         logMsg('CPU will stack attack.');
@@ -1071,16 +1421,11 @@ function cpuTurn(){
     }
   }
   
-  // --- Improved Play Logic (Save Wilds) ---
-  
   let cardToPlay = null;
   let cardIndex = -1;
   
-  // Pass 1: Look for ANY legal play that is NOT a wild
   for(let i=0; i<hand.length; i++){
     const c = hand[i];
-    // legalPlay returns true for valid colored cards/actions AND wilds. 
-    // We filter out wilds here.
     if(legalPlay(c) && !isWildCard(c)) {
         cardToPlay = c;
         cardIndex = i;
@@ -1088,11 +1433,9 @@ function cpuTurn(){
     }
   }
   
-  // Pass 2: If no regular card found, look for a Wild to save the day
   if(!cardToPlay) {
       for(let i=0; i<hand.length; i++){
         const c = hand[i];
-        // This will pick up 8s, Wilds, or WD4s
         if(legalPlay(c) && isWildCard(c)){
             cardToPlay = c;
             cardIndex = i;
@@ -1133,7 +1476,7 @@ function cpuPlayCard(idx) {
   
   if(isWildCard(cardPlayed)){
     state.currentSuit=chooseSuit('p2',cardPlayed);
-    state.currentColor=state.unoMode ? state.currentSuit : null;
+    state.currentColor=state.gameVariant === 'uno' ? state.currentSuit : null;
     logMsg(`CPU changed color/suit to ${state.currentSuit}`);
   } else{
     state.currentSuit=cardPlayed.suit||cardPlayed.color;
@@ -1175,12 +1518,10 @@ function cpuDrawLoop() {
   }
 }
 
-// --- End of CPU Logic ---
-
 
 function chooseSuit(playerType,card){
   const hand=state.players[playerType];
-  if(state.unoMode){
+  if(state.gameVariant === 'uno'){
     let counts={R:0,G:0,B:0,Y:0};
     hand.forEach(c=>{if(c.color) counts[c.color]++;});
     return Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b, UNO_COLORS[0]);
@@ -1214,7 +1555,7 @@ function drawCardForPlayer(player) {
 }
 
 function playerDraw() {
-  if (state.pendingDraw > 0 && state.unoMode) {
+  if (state.pendingDraw > 0 && state.gameVariant === 'uno') {
     // Player is accepting the penalty.
     resolvePenaltyDraw(state.currentPlayer); 
     return 'resolved_penalty'; 
@@ -1242,6 +1583,7 @@ function playerDraw() {
 }
 
 function attemptPlayCard(player,idx){
+  if(state.gameVariant === 'war') return; // Disabled in War
   if(state.currentPlayer!==player){updateStatus("Not your turn");return;}
   if(state.uiLocked) return;
   
@@ -1250,13 +1592,10 @@ function attemptPlayCard(player,idx){
   if(!legalPlay(card)){
     if (state.pendingDraw > 0) {
       state.penaltyAttemptCount++;
-      
-      // Warning for repetitive failures on penalty
       if (state.penaltyAttemptCount >= 2) {
           showPenaltyWarning();
           return;
       }
-      
       updateStatus(`You have a ${state.pendingDraw}-card penalty. You must play a stacking card or Draw.`);
     } else {
       updateStatus("Illegal play");
@@ -1264,7 +1603,6 @@ function attemptPlayCard(player,idx){
     return;
   }
   
-  // Legal play made, reset count
   state.penaltyAttemptCount = 0;
   
   hand.splice(idx,1);state.discard.push(card);
@@ -1292,7 +1630,7 @@ function attemptPlayCard(player,idx){
     state.currentColor=card.color; 
     skipTurn = applySpecial(card, player);
 
-    if (state.unoMode && card.rank === 'SKIP') {
+    if (state.gameVariant === 'uno' && card.rank === 'SKIP') {
         skipTurn = true; 
     }
   }
@@ -1346,7 +1684,7 @@ function showSuitPickerModal(card=null){
   buttonContainer.innerHTML = '';
   
   let choices = [];
-  if(state.unoMode) {
+  if(state.gameVariant === 'uno') {
     title.textContent = 'Choose a color:';
     choices = [
       { suit: 'R', text: 'Red' },
@@ -1370,17 +1708,17 @@ function showSuitPickerModal(card=null){
     b.dataset.suit = choice.suit;
     b.innerHTML = choice.text;
     
-    if(state.unoMode) b.dataset.color = choice.suit;
+    if(state.gameVariant === 'uno') b.dataset.color = choice.suit;
     else if(choice.suit === '♥' || choice.suit === '♦') b.dataset.suit = choice.suit;
 
     b.onclick = () => {
       state.currentSuit = b.dataset.suit;
-      state.currentColor = state.unoMode ? b.dataset.suit : null;
+      state.currentColor = state.gameVariant === 'uno' ? b.dataset.suit : null;
       
       const skipTurn = applySpecial(card, player);
       
       const playerName = (player === 'p1') ? 'Player 1' : 'Player 2';
-      logMsg(`${playerName} changed ${state.unoMode ? 'color' : 'suit'} to ${state.currentSuit}`);
+      logMsg(`${playerName} changed ${state.gameVariant === 'uno' ? 'color' : 'suit'} to ${state.currentSuit}`);
       
       modal.classList.remove('visible'); 
       state.isPickingSuit = false;
@@ -1479,9 +1817,7 @@ el.drawBtn.addEventListener('click',()=>{
 
   if(state.mustPlayIfAble) {
     if(state.pendingDraw > 0) {
-      // Check for D2
       const hasD2 = state.players[state.currentPlayer].some(c => c.rank === 'D2');
-      // Check for WD4 if settings allow stacking WD4 on D2 and top is D2
       let hasStackable = hasD2;
       if (state.stackWD4onD2 && !hasStackable) {
           const top = state.discard[state.discard.length-1];
@@ -1561,16 +1897,12 @@ el.passBtn.addEventListener('click',()=>{
 el.hintBtn.addEventListener('click',()=>{
   const hand = state.players[state.currentPlayer];
   
-  // FIXED: Updated hint logic to include WD4 stacking check
   if(state.pendingDraw > 0) {
     const top = state.discard[state.discard.length-1];
-    
-    // Check for D2 (always allowed on D2)
     let stackable = null;
     
     if (top.rank === 'D2') {
        stackable = hand.find(c => c.rank === 'D2');
-       // If no D2, check for WD4 if settings allow
        if (!stackable && state.stackWD4onD2) {
           stackable = hand.find(c => c.rank === 'WD4');
        }
@@ -1584,7 +1916,6 @@ el.hintBtn.addEventListener('click',()=>{
     return;
   }
 
-  // Improved Hint Logic: Match CPU preference (Normal card > Wild card)
   let h = hand.find(c => legalPlay(c) && !isWildCard(c));
   if (!h) h = hand.find(c => legalPlay(c));
 
@@ -1592,13 +1923,10 @@ el.hintBtn.addEventListener('click',()=>{
 });
 
 el.cpuSpeedBtn.addEventListener('click',()=>{
-  if(state.cpuPlayDelay === 700) {
-    state.cpuPlayDelay = 0;
-    el.cpuSpeedBtn.textContent = 'CPU Speed: Instant';
-  } else {
-    state.cpuPlayDelay = 700;
-    el.cpuSpeedBtn.textContent = 'CPU Speed: Normal';
-  }
+  state.speedIndex = (state.speedIndex + 1) % SPEEDS.length;
+  const s = SPEEDS[state.speedIndex];
+  state.cpuPlayDelay = s.delay;
+  el.cpuSpeedBtn.textContent = `CPU: ${s.label}`;
 });
 
 el.shuffleBtn.addEventListener('click',()=>{
@@ -1614,8 +1942,8 @@ el.drawPile.addEventListener('click',()=>el.drawBtn.click());
 
 el.settingsBtn.addEventListener('click', () => {
   el.gameModeSelect.value = state.gameMode;
+  el.gameVariantSelect.value = state.gameVariant; // Updated to select
   el.initialHandSizeSelect.value = state.initialHandSize.toString();
-  el.unoModeChk.checked = state.unoMode;
   el.reverseSkipChk.checked = state.reverseSkip;
   el.stackWD4Chk.checked = state.stackWD4onD2;
   el.mustPlayIfAbleChk.checked = state.mustPlayIfAble;
@@ -1623,24 +1951,51 @@ el.settingsBtn.addEventListener('click', () => {
   el.allowPassChk.checked = state.allowPass;
   el.firstTurnRuleSelect.value = state.firstTurnRule;
   
-  el.reverseSkipLabel.style.display = state.unoMode ? 'flex' : 'none';
-  el.stackWD4Label.style.display = state.unoMode ? 'flex' : 'none';
+  toggleSettingsVisibility(state.gameVariant);
   el.settingsModal.classList.add('visible');
 });
 
-el.unoModeChk.addEventListener('change', () => {
-  el.reverseSkipLabel.style.display = el.unoModeChk.checked ? 'flex' : 'none';
-  el.stackWD4Label.style.display = el.unoModeChk.checked ? 'flex' : 'none';
+el.gameVariantSelect.addEventListener('change', () => {
+    toggleSettingsVisibility(el.gameVariantSelect.value);
 });
+
+function toggleSettingsVisibility(variant) {
+    if (variant === 'c8') {
+        el.c8UnoSettings.style.display = 'block';
+        el.reverseSkipLabel.style.display = 'none';
+        el.stackWD4Label.style.display = 'none';
+        el.initialHandSizeSelect.parentElement.style.display = 'flex';
+        el.gameModeContainer.style.display = 'flex';
+    } else if (variant === 'uno') {
+        el.c8UnoSettings.style.display = 'block';
+        el.reverseSkipLabel.style.display = 'flex';
+        el.stackWD4Label.style.display = 'flex';
+        el.initialHandSizeSelect.parentElement.style.display = 'flex';
+        el.gameModeContainer.style.display = 'flex';
+    } else if (variant === 'war') {
+        // Hide most C8/Uno settings for War
+        el.c8UnoSettings.style.display = 'none';
+        // Hide PvP option for War
+        el.gameModeContainer.style.display = 'none';
+    }
+}
 
 el.cancelSettingsBtn.addEventListener('click', () => {
   el.settingsModal.classList.remove('visible');
 });
 
 el.applySettingsBtn.addEventListener('click', () => {
-  state.gameMode = el.gameModeSelect.value;
+  state.gameVariant = el.gameVariantSelect.value;
+  
+  // Force PVC if War
+  if (state.gameVariant === 'war') {
+      state.gameMode = 'pvc';
+  } else {
+      state.gameMode = el.gameModeSelect.value;
+  }
+
   state.initialHandSize = parseInt(el.initialHandSizeSelect.value);
-  state.unoMode = el.unoModeChk.checked;
+  state.unoMode = state.gameVariant === 'uno'; // Compatibility
   state.reverseSkip = el.reverseSkipChk.checked;
   state.stackWD4onD2 = el.stackWD4Chk.checked;
   state.mustPlayIfAble = el.mustPlayIfAbleChk.checked;
@@ -1653,12 +2008,16 @@ el.applySettingsBtn.addEventListener('click', () => {
 });
 
 el.rulesBtn.addEventListener('click', () => {
-  if(state.unoMode) {
-    el.rulesC8.style.display = 'none';
+  el.rulesC8.style.display = 'none';
+  el.rulesUNO.style.display = 'none';
+  el.rulesWar.style.display = 'none';
+  
+  if(state.gameVariant === 'uno') {
     el.rulesUNO.style.display = 'block';
+  } else if(state.gameVariant === 'war') {
+    el.rulesWar.style.display = 'block';
   } else {
     el.rulesC8.style.display = 'block';
-    el.rulesUNO.style.display = 'none';
   }
   el.rulesModal.classList.add('visible');
 });
@@ -1696,57 +2055,71 @@ function startGame(settingsChanged = false){
     state.lastWinner = null;
   }
   
-  state.gameMode = el.gameModeSelect.value;
+  state.gameMode = (state.gameVariant === 'war') ? 'pvc' : el.gameModeSelect.value;
+  
   el.endGameModal.classList.remove('visible');
   el.suitPickerModal.classList.remove('visible'); 
   el.handOverModal.classList.remove('visible');
   el.warningModal.classList.remove('visible');
 
   state.deck=makeDeck();
-  state.players.p1=state.deck.splice(0,state.initialHandSize);
-  state.players.p2=state.deck.splice(0,state.initialHandSize);
   
-  state.pendingDraw = 0;
-  state.penaltyAttemptCount = 0;
-  state.isPickingSuit = false;
+  if (state.gameVariant === 'war') {
+      // War: Deal whole deck
+      const mid = Math.floor(state.deck.length / 2);
+      state.players.p1 = state.deck.slice(0, mid);
+      state.players.p2 = state.deck.slice(mid);
+      state.warPot = [];
+      state.warActive = {p1: null, p2: null};
+      state.warState = 'idle';
+      state.discard = []; // Unused in War
+      state.currentPlayer = 'p1'; // Manual start
+      el.warLastResult.textContent = '';
+  } else {
+      state.players.p1=state.deck.splice(0,state.initialHandSize);
+      state.players.p2=state.deck.splice(0,state.initialHandSize);
+      state.pendingDraw = 0;
+      state.penaltyAttemptCount = 0;
+      state.isPickingSuit = false;
 
-  let first; 
-  do {
-    if(state.deck.length === 0) state.deck = makeDeck();
-    first=state.deck.shift();
-    if (first) {
-      state.discard=[first];
-    } else {
-      state.deck = makeDeck(); 
-      first = state.deck.shift();
-      state.discard = [first];
-    }
-  } while(first.rank==='8'||first.rank==='WILD'||first.rank==='WD4'|| (state.unoMode && ['SKIP','REV','D2'].includes(first.rank)));
-  
-  state.currentSuit=first.suit||first.color;
-  state.currentColor=first.color||first.suit;
-  
-  let firstPlayer = 'p1';
-  switch (state.firstTurnRule) {
-    case 'p2':
-      firstPlayer = 'p2';
-      break;
-    case 'random':
-      firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
-      break;
-    case 'loser':
-      if (state.lastWinner === 'p1') firstPlayer = 'p2';
-      else if (state.lastWinner === 'p2') firstPlayer = 'p1';
-      else firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
-      break;
-    case 'p1':
-    default:
-      firstPlayer = 'p1';
-      break;
+      let first; 
+      do {
+        if(state.deck.length === 0) state.deck = makeDeck();
+        first=state.deck.shift();
+        if (first) {
+          state.discard=[first];
+        } else {
+          state.deck = makeDeck(); 
+          first = state.deck.shift();
+          state.discard = [first];
+        }
+      } while(first.rank==='8'||first.rank==='WILD'||first.rank==='WD4'|| (state.gameVariant === 'uno' && ['SKIP','REV','D2'].includes(first.rank)));
+      
+      state.currentSuit=first.suit||first.color;
+      state.currentColor=first.color||first.suit;
+      
+      let firstPlayer = 'p1';
+      switch (state.firstTurnRule) {
+        case 'p2':
+          firstPlayer = 'p2';
+          break;
+        case 'random':
+          firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
+          break;
+        case 'loser':
+          if (state.lastWinner === 'p1') firstPlayer = 'p2';
+          else if (state.lastWinner === 'p2') firstPlayer = 'p1';
+          else firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
+          break;
+        case 'p1':
+        default:
+          firstPlayer = 'p1';
+          break;
+      }
+      state.currentPlayer = firstPlayer;
   }
-  state.currentPlayer = firstPlayer;
-  state.uiLocked = false;
 
+  state.uiLocked = false;
   el.logPreview.innerHTML='';
   el.fullLog.innerHTML='';
   el.fullLogContent.innerHTML='';
@@ -1763,10 +2136,16 @@ function startGame(settingsChanged = false){
   }
 
 
-  const startMsg = `Game started. Top: ${cardLabel(first)}. ${state.unoMode ? 'Color' : 'Suit'}: ${state.currentSuit}`;
+  const startMsg = state.gameVariant === 'war' ? 'War started. Click deck to battle.' : `Game started. Top: ${cardLabel(state.discard[0])}. ${state.gameVariant === 'uno' ? 'Color' : 'Suit'}: ${state.currentSuit}`;
   logMsg(startMsg);
+  
+  if (state.gameVariant === 'war') {
+      renderAll();
+      updateStatus("War Mode: Click your deck to flip cards.");
+      return;
+  }
 
-  if (firstPlayer === 'p1') {
+  if (state.currentPlayer === 'p1') {
     showP1Hand(true);
     updateStatus("Player 1's turn.");
   } else {
