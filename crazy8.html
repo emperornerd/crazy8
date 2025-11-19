@@ -1756,8 +1756,16 @@ function showSuitPickerModal(card=null){
 
 function checkWin(){
   let winner = null;
-  if(state.players.p1.length===0) winner = 'p1';
-  else if(state.players.p2.length===0) winner = 'p2';
+  
+  if (state.gameVariant === 'war') {
+      // In War, running out of cards means you LOSE.
+      if(state.players.p1.length===0) winner = 'p2';
+      else if(state.players.p2.length===0) winner = 'p1';
+  } else {
+      // In C8/UNO, running out of cards means you WIN.
+      if(state.players.p1.length===0) winner = 'p1';
+      else if(state.players.p2.length===0) winner = 'p2';
+  }
   
   if(winner){
     state.uiLocked = true;
